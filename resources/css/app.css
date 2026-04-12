@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Sidebar Global Styling */
+
+.sidebar {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+.sidebar-header {
+    background-color: #000000 !important;
+    border-bottom: 1px solid #333333;
+}
+
+.sidebar-brand {
+    color: #ffffff !important;
+}
+
+.sidebar-toggler span {
+    background-color: #ffffff !important;
+}
+
+.sidebar-body {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+/* Navigation Links - Override Bootstrap */
+.sidebar .nav {
+    background-color: #000000 !important;
+}
+
+.sidebar .nav-link {
+    color: #ffffff !important;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link:focus {
+    color: #ffffff !important;
+    background-color: #222222 !important;
+}
+
+.sidebar .nav-link.active {
+    color: #ffffff !important;
+    background-color: #1f2937 !important;
+}
+
+.sidebar .nav-link:visited {
+    color: #ffffff !important;
+}
+
+/* Link Title */
+.sidebar .link-title {
+    color: #ffffff !important;
+}
+
+/* Feather Icons */
+.sidebar [data-feather] {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+}
+
+.sidebar .link-icon {
+    color: #ffffff !important;
+}
+
+.sidebar .link-arrow {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+}
+
+/* Navigation Items */
+.sidebar .nav-item {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+.sidebar .nav-category {
+    border-top: 1px solid #333333;
+    background-color: #000000 !important;
+}
+
+/* Submenu Styling */
+.sidebar .sub-menu {
+    background-color: #111111;
+}
+
+.sidebar .sub-menu .nav-item {
+    background-color: #111111;
+}
+
+.sidebar .sub-menu .nav-link {
+    color: #e0e0e0 !important;
+    padding-left: 2rem;
+}
+
+.sidebar .sub-menu .nav-link:hover {
+    background-color: #222222 !important;
+    color: #ffffff !important;
+}
+
+.sidebar .sub-menu .nav-link.active {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+}
+
+/* Collapse State */
+.sidebar .collapse.show {
+    background-color: #111111;
+}
+
+/* Override Bootstrap Utility Classes */
+.sidebar.bg-dark {
+    background-color: #000000 !important;
+}
+
+.sidebar.text-light,
+.sidebar.text-white {
+    color: #ffffff !important;
+}
+
+.sidebar .text-dark {
+    color: #ffffff !important;
+}
+
+/* Button Logout */
+.sidebar .nav-link[href*="logout"] {
+    color: #ffffff !important;
+}
+
+.sidebar .nav-link[href*="logout"]:hover {
+    background-color: #222222 !important;
+    color: #ffffff !important;
+}
+
+
+/* Force Override All Bootstrap and Tailwind Styles */
+.sidebar .nav-link,
+.sidebar .nav-link *,
+.sidebar .nav-link:hover,
+.sidebar .nav-link:focus,
+.sidebar .nav-link:active,
+.sidebar .nav-link.active,
+.sidebar .nav-link:visited {
+    background: #111827 !important;
+    color: #ffffff !important;
+}
+
+.sidebar svg,
+.sidebar .nav-link svg,
+.sidebar [data-feather],
+.sidebar .link-icon,
+.sidebar .link-arrow {
+    stroke: #ffffff !important;
+    color: #ffffff !important;
+}

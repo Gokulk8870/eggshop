@@ -1,0 +1,164 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Products;
+use App\Models\purchase_invoices_items;
+use App\Models\SalesInvoiceItem;
+use App\Models\SalesInvoice;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use PhpParser\Builder\Function_;
+use PhpParser\Node\Expr\FuncCall;
+
+class ReportController extends Controller
+{
+    public function stockreport(){
+        
+    $products=DB::table('products as p')
+            ->select(
+                'p.id',
+                'p.product_name',
+                'p.quantity as opening_stock',
+                DB::raw('(select IFNULL(SUM(quantity),0) from purchase_invoices_items where product_id=p.id)as stock_in'),
+                DB::raw('(select IFNULL(SUM(quantity),0) from sales_invoice_items where product_id=p.id)as stock_out'),
+                DB::raw('(p.quantity+(select IFNULL(SUM(quantity),0) from purchase_invoices_items where product_id=p.id)-(SELECT IFNULL(SUM(quantity), 0) from sales_invoice_items where product_id=p.id)) as closing_stock')
+                )->get();
+
+    $trays = DB::table('trays as t')
+    ->select(
+        't.id',
+        't.tcolor',
+        't.quantity as opening_tray',
+        DB::raw('(SELECT IFNULL(SUM(quantity),0) 
+                  FROM tray_transactions 
+                  WHERE tray_id = t.id AND type = "return") as tray_in'),
+        DB::raw('(SELECT IFNULL(SUM(quantity),0) 
+                  FROM tray_transactions 
+                  WHERE tray_id = t.id AND type = "out") as tray_out'),
+        DB::raw('(
+            t.quantity
+            +
+            (SELECT IFNULL(SUM(quantity),0) 
+             FROM tray_transactions 
+             WHERE tray_id = t.id AND type = "return")
+            -
+            (SELECT IFNULL(SUM(quantity),0) 
+             FROM tray_transactions 
+             WHERE tray_id = t.id AND type IN ("out","damage","lost"))
+        ) as closing_tray')
+    )
+    ->get();
+    return view('reports.stockreport',compact('products','trays'));
+    }
+    public function productreport(){
+        $products=DB::table('products as p')
+            ->select(
+                'p.id',
+                'p.product_name',
+                'p.quantity as opening_stock',
+                DB::raw('(select IFNULL(SUM(quantity),0) from purchase_invoices_items where product_id=p.id)as stock_in'),
+                DB::raw('(select IFNULL(SUM(quantity),0) from sales_invoice_items where product_id=p.id)as stock_out'),
+                DB::raw('(p.quantity+(select IFNULL(SUM(quantity),0) from purchase_invoices_items where product_id=p.id)-(SELECT IFNULL(SUM(quantity), 0) from sales_invoice_items where product_id=p.id)) as closing_stock')
+                )->get();
+        return view('reports.productreport',compact('products'));
+    }
+    public function trayreport(){
+        $trays = DB::table('trays as t')
+    ->select(
+        't.id',
+        't.tcolor',
+        't.quantity as opening_tray',
+        DB::raw('(SELECT IFNULL(SUM(quantity),0) 
+                  FROM tray_transactions 
+                  WHERE tray_id = t.id AND type = "return") as tray_in'),
+        DB::raw('(SELECT IFNULL(SUM(quantity),0) 
+                  FROM tray_transactions 
+                  WHERE tray_id = t.id AND type = "out") as tray_out'),
+        DB::raw('(
+            t.quantity
+            +
+            (SELECT IFNULL(SUM(quantity),0) 
+             FROM tray_transactions 
+             WHERE tray_id = t.id AND type = "return")
+            -
+            (SELECT IFNULL(SUM(quantity),0) 
+             FROM tray_transactions 
+             WHERE tray_id = t.id AND type IN ("out","damage","lost"))
+        ) as closing_tray')
+    )
+    ->get();
+    return view('reports.trayreport',compact('trays'));
+    }
+    public function salesreport(){
+        $sales=DB::table('sales_invoices as s')
+        ->select(
+            's.id',
+            's.customer_name',
+            's.inv_number',
+            's.invoice_date',
+            's.total_price as total_amount',
+            DB::raw('(select IFNULL(SUM(profit),0) from sales_invoice_items where invoice_id=s.id )as profit'),
+            DB::raw('(select IFNULL(SUM(quantity),0) from sales_invoice_items where invoice_id=s.id )as total_items'),
+            DB::raw('(SELECT IFNULL(SUM(eggs), 0) from sales_invoice_items where invoice_id=s.id )as eggscount'),
+        )->get();
+        return view('reports.salereport',compact('sales'));
+    }
+    public function purchasereport(){
+        $purchases=DB::table('purchase_invoices as p')
+        ->select(
+            'p.id',
+            'p.supplier_name',
+            'p.inv_number',
+            'p.invoice_date',
+            'p.total_price as total_amount',
+            DB::raw('(select IFNULL(SUM(quantity),0) from purchase_invoices_items where invoice_id=p.id )as total_items'),
+            DB::raw('(SELECT IFNULL(SUM(eggs), 0) from purchase_invoices_items where invoice_id=p.id )as eggscount'),
+        )->get();
+        return view('reports.purchasereport',compact('purchases'));
+    }
+    public function profitlossreport()
+{
+   
+    $sales = DB::table('sales_invoices')
+        ->selectRaw('DATE_FORMAT(invoice_date, "%Y-%m") as month, SUM(total_price) as total_sales')
+        ->groupBy('month')
+        ->pluck('total_sales', 'month');
+
+    $purchase = DB::table('purchase_invoices')
+        ->selectRaw('DATE_FORMAT(invoice_date, "%Y-%m") as month, SUM(total_price) as total_purchase')
+        ->groupBy('month')
+        ->pluck('total_purchase', 'month');
+
+    $expenses = DB::table('expenses')
+        ->selectRaw('DATE_FORMAT(expense_date, "%Y-%m") as month, SUM(amount) as total_expenses')
+        ->groupBy('month')
+        ->pluck('total_expenses', 'month');
+
+    
+    $months = collect()
+        ->merge($sales->keys())
+        ->merge($purchase->keys())
+        ->merge($expenses->keys())
+        ->unique()
+        ->sort();
+
+    $report = [];
+
+    foreach ($months as $month) {
+        $totalSales = $sales[$month] ?? 0;
+        $totalPurchase = $purchase[$month] ?? 0;
+        $totalExpenses = $expenses[$month] ?? 0;
+
+        $report[] = (object)[
+            'month' => $month,
+            'total_sales' => $totalSales,
+            'total_purchase' => $totalPurchase,
+            'total_expenses' => $totalExpenses,
+            'profit' => $totalSales - $totalPurchase - $totalExpenses,
+        ];
+    }
+
+    return view('reports.profitlossreport', compact('report'));
+}
+}
