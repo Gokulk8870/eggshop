@@ -9,11 +9,21 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up(): void
+  public function up(): void
 {
-    Schema::table('salesclts', function (Blueprint $table) {
-        $table->enum('status', ['active','inactive'])->after('year');
-    });
+    if (Schema::hasTable('salesclts')) {
+
+        if (!Schema::hasColumn('salesclts', 'status')) {
+
+            Schema::table('salesclts', function (Blueprint $table) {
+                $table->enum('status', ['active', 'inactive'])
+                      ->default('active')
+                      ->after('year');
+            });
+
+        }
+
+    }
 }
 
 public function down(): void
