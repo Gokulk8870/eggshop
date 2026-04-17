@@ -68,7 +68,7 @@ class ReportController extends Controller
 
          $products = $query->get();
 
-        $productnames = Products::all();
+        $productnames = products::all();
         return view('reports.productreport',compact('products','productnames'));
     }       
     public function trayreport(Request $request){
