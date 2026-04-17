@@ -5,7 +5,15 @@
 
 
         <div class="container">
+            @auth
+                <span>
+                    {{ auth()->user()->role }} - {{ auth()->user()->name }}
+                </span>
+            @endauth
 
+            @guest
+                <span>Guest</span>
+            @endguest
 
             <form action="{{ route('users.store') }}" method="POST">
                 @csrf
