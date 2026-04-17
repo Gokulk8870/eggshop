@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if(Schema::hasTable('products')){
         Schema::table('products', function (Blueprint $table) {
 
             $table->dropForeign(['supplier_id']); // remove foreign key
             $table->dropColumn('supplier_id');    // remove column
 
         });
+        }
     }
 
     /**
