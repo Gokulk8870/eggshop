@@ -13,7 +13,9 @@
     <!-- Fonts -->
     <link rel="dns-prefetch" href="//fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
-    <link href="{{ mix('css/app.css') }}" rel="stylesheet">
+    {{-- <link href="{{ mix('css/app.css') }}" rel="stylesheet"> --}}
+    <link href="/css/app.css" rel="stylesheet">
+
 
     <!-- Any other styles -->
     @stack('styles')
@@ -84,5 +86,9 @@
         </main>
     </div>
 </body>
+<script>
+    < script src = "/js/app.js" >
+</script>
+</script>
 
 </html>
