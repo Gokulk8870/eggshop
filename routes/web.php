@@ -135,9 +135,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 
 
+
+
 Route::get('/migrate', function () {
-    Artisan::call('migrate', ['--force' => true]);
-    return 'Migration completed';
+    Artisan::call('migrate:fresh');
+    return 'Migration fresh done';
 });
 
 // Auth routes
