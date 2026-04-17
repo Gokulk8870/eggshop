@@ -119,7 +119,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::resource('expenses', ExpenseController::class);
 
     // Users
-    // Route::resource('users', UserController::class);
+    Route::resource('users', UserController::class);
 
     // Reports
     Route::prefix('reports')->group(function(){
@@ -135,11 +135,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 
 
-Route::resource('users', UserController::class);
-Route::get('/fresh-migrate', function () {
-    Artisan::call('migrate:fresh', ['--force' => true]);
-    return "Done";
-});
+
 
 
 // Auth routes

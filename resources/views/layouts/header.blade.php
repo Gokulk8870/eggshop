@@ -11,13 +11,7 @@
 
             <span class="header">
                 {{ now()->format('d-m-Y') }}&nbsp;|&nbsp;
-                @auth
-                    {{ auth()->user()->role }} - {{ auth()->user()->name }}
-                @endauth
-
-                @guest
-                    Guest
-                @endguest
+                {{ auth()->user()->role }} - {{ auth()->user()->name }}
             </span>
 
         </div>

@@ -68,9 +68,9 @@
                                 </div>
 
                             </form>
-                            <div class="text-center mt-3">
+                            {{-- <div class="text-center mt-3">
                                 <a href="{{ route('users.create') }}">Create Account</a>
-                            </div>
+                            </div> --}}
 
                             <div class="text-center mt-4 text-muted">
                                 Powered By Egg Shop Management

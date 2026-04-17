@@ -8,11 +8,11 @@
             <div class="container d-flex align-items-end justify-content-end">
 
 
-                {{-- @if (auth()->user()->role == 'admin') --}}
-                <a href="{{ route('users.create') }}" class="btn btn-primary mb-3">
-                    Add User
-                </a>
-                {{-- @endif --}}
+                @if (auth()->user()->role == 'admin')
+                    <a href="{{ route('users.create') }}" class="btn btn-primary mb-3">
+                        Add User
+                    </a>
+                @endif
             </div>
 
             @if (session('success'))
@@ -38,7 +38,7 @@
                             <td>{{ $user->name }}</td>
                             <td>{{ $user->email }}</td>
                             <td>{{ ucfirst($user->role) }}</td>
-                            {{-- <td>
+                            <td>
                                 @if (auth()->user()->role == 'admin')
                                     <a href="{{ route('users.edit', $user->id) }}">
                                         <i class="fas fa-eye"></i>
@@ -53,7 +53,7 @@
                                         </button>
                                     </form>
                                 @endif
-                            </td> --}}
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
