@@ -9,7 +9,7 @@
 @section('content')
     <div class="card">
         <div class="card-body">
-            {{-- <form action="{{ url('/reports/salereport') }}" method="get">
+            <form action="{{ url('/reports/sales') }}" method="get">
                 <div class="row mb-3">
                     <div class="col-md-3">
                         <div class="form-group">
@@ -23,6 +23,48 @@
                             </datalist>
                         </div>
                     </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="pmethod">Payment Method</label>
+                            <select name="payment_method" id="pmethod" class="form-control">
+
+                                @foreach ($paymentmethods as $pmethod)
+                                    <option value="{{ $pmethod->payment_method }}"
+                                        {{ request('payment_method') == 'UPI' || 'CASH' ? 'selected' : '' }}>
+                                        {{ $pmethod->payment_method }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Filter by Date</label>
+                            <select name="date_filter" class="form-control">
+                                <option value="">-- Select --</option>
+
+                                <option value="today" {{ request('date_filter') == 'today' ? 'selected' : '' }}>Today
+                                </option>
+
+                                <option value="yesterday" {{ request('date_filter') == 'yesterday' ? 'selected' : '' }}>
+                                    Yesterday</option>
+
+                                <option value="this_week" {{ request('date_filter') == 'this_week' ? 'selected' : '' }}>This
+                                    Week</option>
+
+                                <option value="last_week" {{ request('date_filter') == 'last_week' ? 'selected' : '' }}>
+                                    Last
+                                    Week</option>
+
+                                <option value="this_year" {{ request('date_filter') == 'this_year' ? 'selected' : '' }}>
+                                    This
+                                    Year</option>
+
+                                <option value="last_year" {{ request('date_filter') == 'last_year' ? 'selected' : '' }}>
+                                    Last
+                                    Year</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="col-md-3 d-flex align-items-end">
                         <div class="form-group">
                             <button type="submit" class="btn btn-primary"> <i class="fas fa-filter"></i> Filter</button>
@@ -30,7 +72,7 @@
                     </div>
                 </div>
 
-            </form> --}}
+            </form>
             <div class="row mb-3">
                 <div class="col-md-3">
                     <div class="card bg-success text-white">

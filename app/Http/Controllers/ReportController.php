@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use PhpParser\Builder\Function_;
 use PhpParser\Node\Expr\FuncCall;
 use Symfony\Component\HttpFoundation\Response;
+use Carbon\Carbon;
 
 class ReportController extends Controller
 {
@@ -118,9 +119,58 @@ class ReportController extends Controller
         if($request->customer_name){
             $query->where('s.customer_name','like','%'.$request->customer_name.'%');
         }
+        if($request->payment_method){
+            $query->where('s.payment_method', 'like', '%'.$request->payment_method.'%');
+        }
+
+        $filter = $request->date_filter;
+        if ($filter == 'today') {
+            $query->whereDate('s.invoice_date', Carbon::today());
+        }
+        else if($filter=='yesterday'){
+            $query->whereDate('s.invoice_date', Carbon::yesterday());
+        
+        }
+        else if ($filter == 'this_week') {
+            $query->whereBetween('s.invoice_date', [
+                Carbon::now()->startOfWeek(),
+                Carbon::now()->endOfWeek()
+            ]);
+        }
+        else if($filter=='last_week'){
+            $query->whereBetween('s.invoice_date',[
+                Carbon::now()->subWeek()->startOfWeek(),
+                Carbon::now()->subWeek()->endOfWeek()
+            ]);
+        }
+        else if($filter=='this_month'){
+            $query->whereBetween('s.invoice_date',[
+                Carbon::now()->startOfMonth(),
+                Carbon::now()->endOfMonth()
+            ]);
+        }
+        else if($filter=='last_month'){
+            $query->whereBetween('s.invoice_date',[
+                Carbon::now()->subMonth()->startOfMonth(),
+                Carbon::now()->subMonth()->endOfMonth()
+            ]);
+        }
+        else if($filter=='this_year'){
+            $query->whereBetween('s.invoice_date',[
+                Carbon::now()->startOfYear(),
+                Carbon::now()->endOfYear()
+            ]);
+        }
+        else if($filter=='last_year'){
+            $query->whereBetween('s.invoice_date',[
+                Carbon::now()->subYear()->startOfYear(),
+                Carbon::now()->subYear()->endOfYear()
+            ]);
+        }
         $sales=$query->get();
         $customers=SalesInvoice::all();
-        return view('reports.salereport',compact('sales','customers'));
+        $paymentmethods=SalesInvoice::select('payment_method')->distinct()->get();
+        return view('reports.salereport',compact('sales','customers','paymentmethods'));
     }
     public function purchasereport(){
         $purchases=DB::table('purchase_invoices as p')
