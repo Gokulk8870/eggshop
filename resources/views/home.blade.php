@@ -32,7 +32,15 @@
                     <div class="col-md-3">
                         <div class="card bg-dark text-white p-3">
                             <h5>Total Profit</h5>
-                            <h3>₹ {{ number_format($totalProfit) }}</h3>
+                            @if ($totalProfit < 0)
+                                <h4 class="text-danger">
+                                    🔻 Loss: ₹ {{ number_format(abs($totalProfit)) }}
+                                </h4>
+                            @else
+                                <h4 class="text-success">
+                                    📈 Profit: ₹ {{ number_format($totalProfit) }}
+                                </h4>
+                            @endif
                         </div>
                     </div>
                 @endif

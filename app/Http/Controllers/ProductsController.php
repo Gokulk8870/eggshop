@@ -6,14 +6,43 @@ use Illuminate\Http\Request;
 use App\Models\Products;
 use App\Models\Tray;
 use App\Models\TrayTransaction;
+use Doctrine\DBAL\Query;
 use Illuminate\Support\Facades\DB;
 
 class ProductsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $products = Products::all();
-        return view('products.index', compact('products'));
+        $query = Products::query();
+        if($request->product_name){
+            $query->where('product_name','like','%'.$request->product_name.'%');
+        }
+        if($request->size){
+            $query->where('size','like','%'.$request->size.'%');
+        }
+        if($request->color){
+            $query->where('color','like','%'.$request->color.'%');
+        }
+        $products=$query->orderBy('id','desc')->get();
+        $sizes = Products::select('size')->distinct()->pluck('size');
+        $colors = Products::select('color')->distinct()->pluck('color');;
+
+        return view('products.index', compact('products','sizes','colors'));
+    }
+
+    public function productsearch(Request $request){
+        $query=products::query();
+        if($request->product_name){
+             $query->where('product_name','like','%'.$request->product_name.'%');
+        }
+         if($request->size){
+            $query->where('size','like','%'.$request->size.'%');
+        }
+         if($request->color){
+            $query->where('color','like','%'.$request->color.'%');
+        }
+        $product=$query->distinct()->get();
+        return response()->json($product);
     }
 
     public function create()

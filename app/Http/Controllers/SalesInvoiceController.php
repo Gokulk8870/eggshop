@@ -77,7 +77,17 @@ class SalesInvoiceController extends Controller
 
     public function create()
     {
-        $trays = Tray::where('quantity', '>', 0)->get();
+        // $trays = Tray::where('quantity', '>', 0)->get();
+        // $availabletrays=TrayTransaction('type','return')->get();
+        $trays = Tray::with('transactions')->get();
+
+        foreach ($trays as $tray) {
+
+            $returned = $tray->transactions->where('type', 'return')->sum('quantity');
+            $out      = $tray->transactions->where('type', 'out')->sum('quantity');
+
+            $tray->available = $tray->quantity + $returned - $out;
+        }
         $products = Products::all();
         $format = Salesclt::where('status','active')->first();
         $total_price = 0;
@@ -111,130 +121,7 @@ class SalesInvoiceController extends Controller
         return response()->json($product);
     }
 
-//    public function store(Request $request)
-// {
-//     // ✅ VALIDATION
-//     $request->validate([
-//         'inv_number'    => 'required',
-//         'customer_name' => 'required',
-//         'phno'          => 'required',
-//         'product_id'    => 'required|exists:products,id',
-//         'quantity'      => 'required|numeric|min:1',
-//         'sale_price'    => 'required|numeric',
-//         'purchase_price'=> 'required|numeric',
-//     ]);
 
-//     $trayQty   = (int) $request->quantity;
-//     $extraEggs = (int) ($request->eggs ?? 0);
-//     $eggs      = ($trayQty * 30) + $extraEggs;
-
-//     // ✅ GET PRODUCT
-//     $product = Products::find($request->product_id);
-
-//     if (!$product) {
-//         return back()->with('error', 'Product not found');
-//     }
-
-//     // ✅ STOCK CHECK
-//     if ($product->totaleggs < $eggs || $product->quantity < $trayQty) {
-//         return back()->with('error', 'Insufficient product stock');
-//     }
-
-//     // ✅ CREATE INVOICE
-//     $invoice = SalesInvoice::create([
-//         'inv_number'     => $request->inv_number,
-//         'customer_name'  => $request->customer_name,
-//         'phno'           => $request->phno,
-//         'invoice_date'   => $request->invoice_date,
-//         'total_price'    => $request->total_price,
-//         'sale_price'     => $request->sale_price,
-//         'payment_method' => $request->payment_method,
-//         'tray_need'      => $request->tray_need ?? 'no',
-//         'tray_id'        => $request->tray_need == 'yes' ? $request->tray_id : null,
-//     ]);
-
-//     // ✅ PROFIT CALCULATION
-//     $sale_per_egg     = $request->sale_price / 30;
-//     $purchase_per_egg = $request->purchase_price / 30;
-
-//     $product_profit = ($sale_per_egg - $purchase_per_egg) * $eggs;
-//     $tray_profit    = ($request->tray_need == 'yes') ? ($trayQty * 20) : 0;
-//     $total_profit   = $product_profit + $tray_profit;
-
-//     // ✅ SAVE ITEM (IMPORTANT 🔥)
-//     SalesInvoiceItem::create([
-//         'invoice_id'     => $invoice->id,
-//         'product_id'     => $product->id,
-
-//         // SNAPSHOT
-//         'product_name'   => $product->product_name,
-//         'size'           => $product->size,
-//         'color'          => $product->color,
-
-//         'quantity'       => $trayQty,
-//         'eggs'           => $eggs,
-//         'sale_price'     => $request->sale_price,
-//         'purchase_price' => $request->purchase_price,
-//         'total'          => $request->total_price,
-
-//         // ✅ FIXED (NO INPUT DEPENDENCY)
-//         'tray_use'       => ($request->tray_need == 'yes') ? $request->tray_quantity : 0,
-
-//         'profit'         => $total_profit,
-//     ]);
-
-//     // ✅ DEDUCT PRODUCT STOCK
-//     $product->decrement('totaleggs', $eggs);
-//     $product->decrement('quantity', $trayQty);
-
-//     // ✅ TRAY LOGIC (MULTI ROW SAFE 🔥)
-//     if ($request->tray_need == 'yes' && $request->tray_id) {
-
-//         $selectedTray = Tray::find($request->tray_id);
-
-//         if (!$selectedTray) {
-//             return back()->with('error', 'Tray not found');
-//         }
-
-//         // 👉 ALL SAME COLOR TRAYS
-//         $trays = Tray::where('tcolor', $selectedTray->tcolor)->get();
-
-//         $totalAvailable = $trays->sum('quantity');
-
-//         if ($totalAvailable < $trayQty) {
-//             return back()->with('error', 'Only '.$totalAvailable.' trays available');
-//         }
-
-//         $remaining = $trayQty;
-
-//         foreach ($trays as $tray) {
-
-//             if ($remaining <= 0) break;
-
-//             if ($tray->quantity >= $remaining) {
-//                 $used = $remaining;
-//                 $tray->decrement('quantity', $remaining);
-//                 $remaining = 0;
-//             } else {
-//                 $used = $tray->quantity;
-//                 $remaining -= $used;
-//                 $tray->update(['quantity' => 0]);
-//             }
-
-//             // ✅ SAVE TRANSACTION
-//             TrayTransaction::create([
-//                 'tray_id'      => $tray->id,
-//                 'customer_id'  => Customer::where('phno', $request->phno)->value('id'),
-//                 'type'         => 'out',
-//                 'quantity'     => $used,
-//                 'reference_id' => $invoice->id,
-//             ]);
-//         }
-//     }
-
-//     return redirect()->route('salesinvoices.index')
-//         ->with('success', 'Sales Invoice Created Successfully');
-// }
 
 public function store(Request $request)
 {
@@ -242,37 +129,64 @@ public function store(Request $request)
 
     try {
 
-        // ✅ VALIDATION
+        // ===============================
+        // ✅ STEP 1: VALIDATION
+        // ===============================
         $request->validate([
             'inv_number'     => 'required',
             'customer_name'  => 'required',
             'phno'           => 'required',
             'product_id'     => 'required|exists:products,id',
-            'tray_quantity'  => 'required|numeric|min:0',
-            'sale_price'     => 'required|numeric',
-            'purchase_price' => 'required|numeric',
+            'quantity'       => 'required|numeric|min:1', // trays
+            'sale_price'     => 'required|numeric|min:0',
+            'purchase_price' => 'required|numeric|min:0',
+            'total_price'    => 'required|numeric|min:0',
         ]);
 
-        // ✅ INPUTS
-        $trayQty   = (int) $request->tray_quantity; // 🔥 correct
-        $extraEggs = (int) ($request->eggs ?? 0);
-        $eggs      = ($trayQty * 30) + $extraEggs;
+        // ===============================
+        // ✅ STEP 2: INPUTS
+        // ===============================
+        $trayQty = (int) $request->quantity;   // trays
+        $eggs    = (int) $request->eggs;       // already calculated in UI
 
-        // ✅ PRODUCT
+        $trayNeed = $request->tray_need === 'yes';
+        $trayId   = $trayNeed ? $request->tray_id : null;
+
+        // ===============================
+        // ✅ STEP 3: PRODUCT CHECK
+        // ===============================
         $product = Products::findOrFail($request->product_id);
 
-        // ✅ STOCK CHECK
         if ($product->totaleggs < $eggs || $product->quantity < $trayQty) {
             return back()->with('error', 'Insufficient product stock');
         }
 
-        // ✅ CUSTOMER
+        // ===============================
+        // ✅ STEP 4: TRAY CHECK (BEFORE SAVE)
+        // ===============================
+        if ($trayNeed && $trayId) {
+
+            $selectedTray = Tray::findOrFail($trayId);
+
+            $trays = Tray::where('tcolor', $selectedTray->tcolor)->get();
+            $totalAvailable = $trays->sum('quantity');
+
+            if ($totalAvailable < $trayQty) {
+                return back()->with('error', "Only {$totalAvailable} trays available");
+            }
+        }
+
+        // ===============================
+        // ✅ STEP 5: CUSTOMER
+        // ===============================
         $customer = Customer::firstOrCreate(
             ['phno' => $request->phno],
             ['name' => $request->customer_name]
         );
 
-        // ✅ CREATE INVOICE
+        // ===============================
+        // ✅ STEP 6: CREATE INVOICE
+        // ===============================
         $invoice = SalesInvoice::create([
             'inv_number'     => $request->inv_number,
             'customer_name'  => $request->customer_name,
@@ -281,19 +195,24 @@ public function store(Request $request)
             'total_price'    => $request->total_price,
             'sale_price'     => $request->sale_price,
             'payment_method' => $request->payment_method,
-            'tray_need'      => $request->tray_need ?? 'no',
-            'tray_id'        => $request->tray_need == 'yes' ? $request->tray_id : null,
+            'tray_need'      => $trayNeed ? 'yes' : 'no',
+            'tray_id'        => $trayId,
         ]);
 
-        // ✅ PROFIT
-        $sale_per_egg     = $request->sale_price / 30;
-        $purchase_per_egg = $request->purchase_price / 30;
+        // ===============================
+        // ✅ STEP 7: PROFIT CALCULATION
+        // ===============================
+        $salePerEgg     = $request->sale_price / 30;
+        $purchasePerEgg = $request->purchase_price / 30;
 
-        $product_profit = ($sale_per_egg - $purchase_per_egg) * $eggs;
-        $tray_profit    = ($request->tray_need == 'yes') ? ($trayQty * 20) : 0;
-        $total_profit   = $product_profit + $tray_profit;
+        $productProfit = ($salePerEgg - $purchasePerEgg) * $eggs;
+        $trayProfit    = $trayNeed ? ($trayQty * 20) : 0;
 
-        // ✅ SAVE ITEM (FIXED)
+        $totalProfit   = $productProfit + $trayProfit;
+
+        // ===============================
+        // ✅ STEP 8: SAVE ITEM
+        // ===============================
         SalesInvoiceItem::create([
             'invoice_id'     => $invoice->id,
             'product_id'     => $product->id,
@@ -301,32 +220,29 @@ public function store(Request $request)
             'size'           => $product->size,
             'color'          => $product->color,
 
-            'quantity'       => $trayQty,   // trays
-            'eggs'           => $eggs,      // eggs
-            'tray_use'       => $trayQty,   // 🔥 FIXED
+            'quantity'       => $trayQty,
+            'eggs'           => $eggs,
+            'tray_use'       => $trayQty,
 
             'sale_price'     => $request->sale_price,
             'purchase_price' => $request->purchase_price,
             'total'          => $request->total_price,
-            'profit'         => $total_profit,
+            'profit'         => $totalProfit,
         ]);
 
-        // ✅ PRODUCT STOCK
+        // ===============================
+        // ✅ STEP 9: UPDATE PRODUCT STOCK
+        // ===============================
         $product->decrement('totaleggs', $eggs);
         $product->decrement('quantity', $trayQty);
 
-        // ✅ TRAY LOGIC
-        if ($request->tray_need == 'yes' && $request->tray_id) {
+        // ===============================
+        // ✅ STEP 10: TRAY DEDUCTION
+        // ===============================
+        if ($trayNeed && $trayId) {
 
-            $selectedTray = Tray::findOrFail($request->tray_id);
-
+            $selectedTray = Tray::findOrFail($trayId);
             $trays = Tray::where('tcolor', $selectedTray->tcolor)->get();
-
-            $totalAvailable = $trays->sum('quantity');
-
-            if ($totalAvailable < $trayQty) {
-                return back()->with('error', 'Only '.$totalAvailable.' trays available');
-            }
 
             $remaining = $trayQty;
 
@@ -334,17 +250,11 @@ public function store(Request $request)
 
                 if ($remaining <= 0) break;
 
-                if ($tray->quantity >= $remaining) {
-                    $used = $remaining;
-                    $tray->decrement('quantity', $remaining);
-                    $remaining = 0;
-                } else {
-                    $used = $tray->quantity;
-                    $remaining -= $used;
-                    $tray->update(['quantity' => 0]);
-                }
+                $used = min($tray->quantity, $remaining);
 
-                // ✅ TRANSACTION
+                $tray->decrement('quantity', $used);
+                $remaining -= $used;
+
                 TrayTransaction::create([
                     'tray_id'      => $tray->id,
                     'customer_id'  => $customer->id,
@@ -355,17 +265,22 @@ public function store(Request $request)
             }
         }
 
+        // ===============================
+        // ✅ FINAL COMMIT
+        // ===============================
         DB::commit();
 
-        return redirect()->route('salesinvoices.index')
+        return redirect()
+            ->route('salesinvoices.index')
             ->with('success', 'Sales Invoice Created Successfully');
 
     } catch (\Exception $e) {
+
         DB::rollback();
-        dd($e->getMessage());
+
+        return back()->with('error', $e->getMessage());
     }
 }
-
 
 
     /**

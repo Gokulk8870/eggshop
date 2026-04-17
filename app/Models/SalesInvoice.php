@@ -19,6 +19,7 @@ class SalesInvoice extends Model
     'eggs',
     'sale_price',// ✅
 ];
+
     public function customer()
     {
         return $this->belongsTo(Customer::class);

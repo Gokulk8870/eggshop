@@ -18,6 +18,50 @@
                     <a href="{{ route('products.create') }}" class="btn btn-primary">Add Product</a>
                 </div>
             @endif
+            <form action="" method="get">
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="pname">Product Name</label>
+                            <input type="text" list="productlist" name="product_name" class="form-control">
+                            <datalist id="productlist">
+                                @foreach ($products as $product)
+                                    <option value="{{ $product->product_name }}"></option>
+                                @endforeach
+                            </datalist>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="size">Size</label>
+                            <select name="size" id="size" class="form-control">
+                                <option value="">----</option>
+                                @foreach ($sizes as $size)
+                                    <option value="{{ $size }}">{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="color">Color</label>
+                            <select name="color" id="color" class="form-control">
+                                <option value="">----</option>
+                                @foreach ($colors as $color)
+                                    <option value="{{ $color }}">{{ $color }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-center mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </div>
+
+                </div>
+            </form>
             <table class="table table-bordered" id="products_table">
                 <thead class="table table-info">
                     <tr>

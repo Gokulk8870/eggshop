@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Receipt</title>
+    <title>Purchase Receipt</title>
+
     <style>
         @page {
             size: 80mm auto;
@@ -33,8 +32,7 @@
         hr {
             border: none;
             border-top: 1px dashed black;
-            margin: 5 px 0;
-
+            margin: 5px 0;
         }
 
         table {
@@ -53,16 +51,12 @@
             background: black;
             color: white;
             border: none;
-            cursor: progress;
+            cursor: pointer;
         }
 
         @media print {
             .print-btn {
                 display: none;
-            }
-
-            body {
-                width: 80mm;
             }
         }
     </style>
@@ -70,34 +64,40 @@
 
 <body>
 
-    <button class="print-btn" onclick="printBill()"></button>
-    <div class="center bold">
-        YOUR EGG SHOP
-    </div>
-    <div class="center">
-        mobile: xxxxxxxxxx
-    </div>
-    <div class="div">
-        Bill No: {{ $purchaseinvoice->inv_number }}
-        Date:{{ $purcheinvoice->invoice_date }}
-        Supplier:{{ $purcheinvoice->supplier_name }}
-    </div>
+    <button class="print-btn" onclick="printBill()">🖨️ Print</button>
+
+    <!-- SHOP -->
+    <div class="center bold">YOUR EGG SHOP</div>
+    <div class="center">Mobile: xxxxxxxxxx</div>
+
     <hr>
+
+    <!-- BILL INFO -->
+    <div>
+        Bill No : {{ $purchaseinvoice->inv_number }} <br>
+        Date : {{ $purchaseinvoice->invoice_date }} <br>
+        Supplier : {{ $purchaseinvoice->supplier_name }}
+    </div>
+
+    <hr>
+
+    <!-- ITEMS -->
     <table>
         <thead>
             <tr>
                 <td class="bold">Item</td>
-                <td class="right bold">QTY</td>
+                <td class="right bold">Qty</td>
                 <td class="right bold">Price</td>
                 <td class="right bold">Amt</td>
             </tr>
         </thead>
-        <tbody>
-            @foreach ($item as $i)
-                <tr>
 
-                    <td>{{ $i->product_name }}
-                        <small>{{ $i->size }}{{ $i->color }}</small>
+        <tbody>
+            @foreach ($purchaseinvoice->items as $i)
+                <tr>
+                    <td>
+                        {{ $i->product->product_name }}<br>
+                        <small>{{ $i->size }} {{ $i->color }}</small>
                     </td>
                     <td class="right">{{ $i->quantity }}</td>
                     <td class="right">{{ $i->purchase_price }}</td>
@@ -106,10 +106,49 @@
             @endforeach
         </tbody>
     </table>
-    @if ($purchaseinvoice->tray_nedd == 'yes')
-        <div class="">
-            Tray Charge : ₹{{ $item->tray_use * 10 }}
+
+    <hr>
+
+    <!-- 🧺 TRAY CALCULATION -->
+    @php
+        $trayTotal = 0;
+
+        if ($purchaseinvoice->tray_need == 'yes') {
+            $trayTotal = $purchaseinvoice->items->sum(fn($i) => $i->tray_use * 10);
+        }
+    @endphp
+
+    @if ($purchaseinvoice->tray_need == 'yes')
+        <div>
+            Tray Charge: ₹ {{ $trayTotal }}
         </div>
+    @endif
+
+    <hr>
+
+    <!-- 💰 TOTAL -->
+    <div>
+        Items Total: ₹ {{ $purchaseinvoice->total_price }}
+    </div>
+
+    <div class="bold">
+        Grand Total: ₹ {{ $purchaseinvoice->total_price + $trayTotal }}
+    </div>
+
+    <hr>
+
+    <!-- FOOTER -->
+    <div class="center">
+        Thank You 😊 <br>
+        Visit Again
+    </div>
+
+    <script>
+        function printBill() {
+            window.print();
+        }
+    </script>
+
 </body>
 
 </html>

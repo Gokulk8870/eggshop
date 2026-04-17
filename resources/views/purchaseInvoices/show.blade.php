@@ -13,22 +13,22 @@
 
                 <div class="col-md-3">
                     <strong>Invoice No:</strong><br>
-                    {{ $purinvoices->inv_number }}
+                    {{ $invoice->inv_number }}
                 </div>
 
                 <div class="col-md-3">
                     <strong>Supplier Name:</strong><br>
-                    {{ $purinvoices->supplier_name }}
+                    {{ $invoice->supplier_name }}
                 </div>
 
                 <div class="col-md-3">
                     <strong>Phone:</strong><br>
-                    {{ $purinvoices->phno }}
+                    {{ $invoice->phno }}
                 </div>
 
                 <div class="col-md-3">
                     <strong>Date:</strong><br>
-                    {{ $purinvoices->invoice_date }}
+                    {{ $invoice->invoice_date }}
                 </div>
 
             </div>
@@ -37,24 +37,24 @@
 
                 <div class="col-md-3">
                     <strong>Payment:</strong><br>
-                    {{ $purinvoices->payment_method }}
+                    {{ $invoice->payment_method }}
                 </div>
 
                 <div class="col-md-3">
                     <strong>Total Amount:</strong><br>
                     <span class="text-primary fw-bold">
-                        ₹ {{ number_format($purinvoices->total_price, 2) }}
+                        ₹ {{ number_format($invoice->total_price, 2) }}
                     </span>
                 </div>
 
                 <div class="col-md-3">
                     <strong>Tray Used:</strong><br>
-                    {{ $purinvoices->tray_need == 'yes' ? 'Yes' : 'No' }}
+                    {{ $invoice->tray_need == 'yes' ? 'Yes' : 'No' }}
                 </div>
 
                 <div class="col-md-3">
                     <strong>Tray Color:</strong><br>
-                    {{ $purinvoices->tray->tcolor ?? '-' }}
+                    {{ $invoice->tray->tcolor ?? '-' }}
                 </div>
 
             </div>
@@ -80,7 +80,7 @@
                         $grandTotal = 0;
                     @endphp
 
-                    @forelse ($purinvoices->items as $index => $item)
+                    @forelse ($invoice->items as $index => $item)
                         @php
                             $grandTotal += $item->total;
                         @endphp
@@ -89,7 +89,7 @@
                             <td>{{ $index + 1 }}</td>
 
                             <td>
-                                {{ $item->product->name ?? 'N/A' }}
+                                {{ $item->product->product_name ?? 'N/A' }}
                             </td>
 
                             <td>{{ $item->quantity }}</td>

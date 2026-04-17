@@ -1,5 +1,5 @@
 @extends('layouts.master')
-@section("title","Manage Purchase Invoice")
+@section('title', 'Manage Purchase Invoice')
 
 @push('styles')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
@@ -105,6 +105,8 @@
                                 @if (auth()->user()->role == 'admin')
                                     <a href="{{ route('purchaseinvoices.show', $purchaseinvoice->id) }}"><i
                                             class="fas fa-eye"></i></a>
+                                    <a href="{{ route('purchaseinvoice.bill', $purchaseinvoice->id) }}">
+                                        <i class="fas fa-receipt"></i></a>
                                     <a href="{{ route('purchaseinvoices.edit', $purchaseinvoice->id) }}"><i
                                             class="fas fa-edit"></i></a>
                                     <form action="{{ route('purchaseinvoices.destroy', $purchaseinvoice->id) }}"

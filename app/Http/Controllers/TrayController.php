@@ -131,7 +131,8 @@ class TrayController extends Controller
                 'tray_id'     => 'required|exists:trays,id',
                 'quantity'    => 'required|integer|min:1',
             ]);
-
+            $tray = Tray::find($request->tray_id);
+            $refund=$request->quantity*20;
             $out = TrayTransaction::where('customer_id', $request->customer_id)
                 ->where('tray_id', $request->tray_id)
                 ->where('type', 'out')
@@ -142,15 +143,17 @@ class TrayController extends Controller
                 ->where('type', 'return')
                 ->sum('quantity');
 
+
             $balance = $out - $returned;
 
             if ($request->quantity > $balance) {
-                return back()->withErrors("Return exceeds balance. Customer owes: $balance trays.");
+                $trayColor = $tray->tcolor ?? 'Tray';
+                return back()->withErrors(['quantity' => "Return exceeds balance. Customer owes {$balance} {$trayColor} trays."]);
             }
 
-            DB::transaction(function () use ($request) {
+            $customer = Customer::find($request->customer_id);
 
-                // ✅ FIXED HERE
+            DB::transaction(function () use ($request) {
                 $tray = Tray::findOrFail($request->tray_id);
 
                 TrayTransaction::create([
@@ -164,9 +167,7 @@ class TrayController extends Controller
                 $tray->save();
             });
 
-            // ✅ better redirect (avoid 404 issues)
-            return redirect()->route('tray.return.form')
-                ->with('success', 'Tray returned successfully');
+            return redirect()->route('trays.return')->with('success', "₹ $refund refunded to $customer, Tray returned successfully");
         }
 
 }

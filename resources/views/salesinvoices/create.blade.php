@@ -193,7 +193,7 @@
                         id: id
                     }, function(data) {
 
-                        $('#eggprice').val(data.sale_price);
+                        $('#eggprice').val(data.eggprice);
                         $('#sale_price').val(data.sale_price);
                         $('#purchase_price').val(data.purchase_price);
 

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use PhpParser\Builder\Function_;
 use PhpParser\Node\Expr\FuncCall;
+use Symfony\Component\HttpFoundation\Response;
 
 class ReportController extends Controller
 {
@@ -51,8 +52,8 @@ class ReportController extends Controller
     ->get();
     return view('reports.stockreport',compact('products','trays'));
     }
-    public function productreport(){
-        $products=DB::table('products as p')
+    public function productreport(Request $request){
+        $query = DB::table('products as p')
             ->select(
                 'p.id',
                 'p.product_name',
@@ -60,15 +61,22 @@ class ReportController extends Controller
                 DB::raw('(select IFNULL(SUM(quantity),0) from purchase_invoices_items where product_id=p.id)as stock_in'),
                 DB::raw('(select IFNULL(SUM(quantity),0) from sales_invoice_items where product_id=p.id)as stock_out'),
                 DB::raw('(p.quantity+(select IFNULL(SUM(quantity),0) from purchase_invoices_items where product_id=p.id)-(SELECT IFNULL(SUM(quantity), 0) from sales_invoice_items where product_id=p.id)) as closing_stock')
-                )->get();
-        return view('reports.productreport',compact('products'));
-    }
-    public function trayreport(){
-        $trays = DB::table('trays as t')
-    ->select(
-        't.id',
-        't.tcolor',
-        't.quantity as opening_tray',
+                );
+         if ($request->product_name) {
+            $query->where('p.product_name', 'like', '%' . $request->product_name . '%');
+        }
+
+         $products = $query->get();
+
+        $productnames = Products::all();
+        return view('reports.productreport',compact('products','productnames'));
+    }       
+    public function trayreport(Request $request){
+        $query = DB::table('trays as t')
+            ->select(
+                't.id',
+                't.tcolor',
+                't.quantity as opening_tray',
         DB::raw('(SELECT IFNULL(SUM(quantity),0) 
                   FROM tray_transactions 
                   WHERE tray_id = t.id AND type = "return") as tray_in'),
@@ -86,12 +94,17 @@ class ReportController extends Controller
              FROM tray_transactions 
              WHERE tray_id = t.id AND type IN ("out","damage","lost"))
         ) as closing_tray')
-    )
-    ->get();
+    );
+    if($request->tcolor){
+        $query->where('t.tcolor','like','%'.$request->tcolor.'%');
+    }
+    $trays=$query->get();
+   
     return view('reports.trayreport',compact('trays'));
     }
-    public function salesreport(){
-        $sales=DB::table('sales_invoices as s')
+    public function salesreport(Request $request){
+
+        $query=DB::table('sales_invoices as s')
         ->select(
             's.id',
             's.customer_name',
@@ -101,8 +114,13 @@ class ReportController extends Controller
             DB::raw('(select IFNULL(SUM(profit),0) from sales_invoice_items where invoice_id=s.id )as profit'),
             DB::raw('(select IFNULL(SUM(quantity),0) from sales_invoice_items where invoice_id=s.id )as total_items'),
             DB::raw('(SELECT IFNULL(SUM(eggs), 0) from sales_invoice_items where invoice_id=s.id )as eggscount'),
-        )->get();
-        return view('reports.salereport',compact('sales'));
+        );
+        if($request->customer_name){
+            $query->where('s.customer_name','like','%'.$request->customer_name.'%');
+        }
+        $sales=$query->get();
+        $customers=SalesInvoice::all();
+        return view('reports.salereport',compact('sales','customers'));
     }
     public function purchasereport(){
         $purchases=DB::table('purchase_invoices as p')
@@ -157,6 +175,7 @@ class ReportController extends Controller
             'total_expenses' => $totalExpenses,
             'profit' => $totalSales - $totalPurchase - $totalExpenses,
         ];
+
     }
 
     return view('reports.profitlossreport', compact('report'));

@@ -172,13 +172,12 @@ class PurchaseInvoiceController extends Controller
     /**
      * Display the specified resource.
      */
-  public function show(PurchaseInvoice $purchaseInvoice)
+  public function show($id)
 {
-    $purinvoices = $purchaseInvoice->load('items'); // load relation
+    $invoice = PurchaseInvoice::with(['items.product', 'tray'])
+        ->findOrFail($id);
 
-    return view('purchaseInvoices.show', [
-        'purinvoices' => $purinvoices
-    ]);
+    return view('purchaseinvoices.show', compact('invoice'));
 }
 
     /**

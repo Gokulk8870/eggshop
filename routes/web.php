@@ -108,7 +108,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // Products
     Route::get('/products/search', [SalesInvoiceController::class, 'getProducts'])
         ->name('products.getproducts');
-
+    
+    Route::get('/product/search',[ProductsController::class,'productsearch'])->name('products.search');
     Route::resource('products', ProductsController::class);
 
     // Other modules
@@ -123,6 +124,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::prefix('reports')->group(function(){
         Route::get('/stock',[ReportController::class,"stockreport"])->name('report.stock');
         Route::get('/product',[ReportController::class,'productreport'])->name('report.product');
+        // Route::get('/products/report/search',[ReportController::class,'productsearch'])->name('proname.report');
         Route::get('/tray',[ReportController::class,'trayreport'])->name('report.tray');
         Route::get('/sales',[ReportController::class, 'salesreport'])->name('report.sales');
         Route::get('/purchases',[ReportController::class,'purchasereport'])->name('report.purchase');
