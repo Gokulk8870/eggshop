@@ -9,16 +9,33 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
+   public function up(): void
+{
+    // First check table exists
+    if (Schema::hasTable('products')) {
+
         Schema::table('products', function (Blueprint $table) {
-            $table->decimal('eggprice',10,2);
-            $table->integer('totaleggs');
-          $table->decimal('purchase_price',10,2);
-$table->decimal('sale_price',10,2);
+
+            if (!Schema::hasColumn('products', 'eggprice')) {
+                $table->decimal('eggprice', 10, 2)->nullable();
+            }
+
+            if (!Schema::hasColumn('products', 'totaleggs')) {
+                $table->integer('totaleggs')->nullable();
+            }
+
+            if (!Schema::hasColumn('products', 'purchase_price')) {
+                $table->decimal('purchase_price', 10, 2)->nullable();
+            }
+
+            if (!Schema::hasColumn('products', 'sale_price')) {
+                $table->decimal('sale_price', 10, 2)->nullable();
+            }
 
         });
+
     }
+}
 
     /**
      * Reverse the migrations.
