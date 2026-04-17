@@ -9,15 +9,27 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
+   public function up(): void
+{
+    if (Schema::hasTable('salesclts')) {
+
         Schema::table('salesclts', function (Blueprint $table) {
-            $table->string('prefix')->unique();
-             $table->String('suffix')->unique();
-             $table->enum('status',['active','inactive']);
-            //
+
+            if (!Schema::hasColumn('salesclts', 'prefix')) {
+                $table->string('prefix')->unique();
+            }
+
+            if (!Schema::hasColumn('salesclts', 'suffix')) {
+                $table->string('suffix')->unique();
+            }
+
+            if (!Schema::hasColumn('salesclts', 'status')) {
+                $table->enum('status', ['active', 'inactive'])->default('active');
+            }
+
         });
     }
+}
 
     /**
      * Reverse the migrations.
