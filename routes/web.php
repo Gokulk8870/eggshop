@@ -137,10 +137,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
 
 
-Route::get('/migrate', function () {
-    Artisan::call('migrate:fresh');
-    return 'Migration fresh done';
-});
+
 
 // Auth routes
 Auth::routes();
