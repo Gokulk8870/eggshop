@@ -38,7 +38,7 @@
                             <td>{{ $user->name }}</td>
                             <td>{{ $user->email }}</td>
                             <td>{{ ucfirst($user->role) }}</td>
-                            <td>
+                            {{-- <td>
                                 @if (auth()->user()->role == 'admin')
                                     <a href="{{ route('users.edit', $user->id) }}">
                                         <i class="fas fa-eye"></i>
@@ -53,7 +53,7 @@
                                         </button>
                                     </form>
                                 @endif
-                            </td>
+                            </td> --}}
                         </tr>
                     @endforeach
                 </tbody>
