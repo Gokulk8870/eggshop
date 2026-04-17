@@ -1,94 +1,93 @@
-@extends('layouts.app')
+<!doctype html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
-@push('styles')
-    <style>
-        body {
-            overflow: hidden;
-            background: #f8f9fa;
-        }
-    </style>
-@endpush
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-@section('content')
-    <div class="container-fluid vh-100 d-flex justify-content-center align-items-center">
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <div class="row w-100 justify-content-center">
-            <div class="col-lg-6 col-md-8 col-sm-10">
+    <title>{{ config('app.name', 'Laravel') }}</title>
 
-                <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-                    <div class="row g-0">
+    <!-- Fonts -->
+    <link rel="dns-prefetch" href="//fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
+    {{-- <link href="{{ mix('css/app.css') }}" rel="stylesheet"> --}}
 
-                        <!-- Left Image -->
-                        <div class="col-md-5 d-none d-md-block">
-                            <img src="{{ asset('images/egg-shop-login.webp') }}" class="img-fluid h-100 w-100"
-                                style="object-fit: cover;">
-                        </div>
 
-                        <!-- Right Form -->
-                        <div class="col-md-7 bg-white p-5 d-flex align-items-center">
-                            <div class="w-100">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Any other styles -->
+    @stack('styles')
 
-                                <h3 class="fw-bold mb-2 text-center">EGG SHOP</h3>
-                                <p class="text-muted text-center mb-4">
-                                    Welcome! Log in to your account.
-                                </p>
+    <!-- Scripts -->
+    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
 
-                                <form method="POST" action="{{ route('login') }}">
-                                    @csrf
+</head>
 
-                                    <!-- Email -->
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Email</label>
-                                        <input type="email" name="email"
-                                            class="form-control @error('email') is-invalid @enderror" required>
+<body>
+    <div id="app">
+        {{-- navbar navbar-expand-md navbar-light bg-white shadow-sm --}}
+        <nav class="">
+            {{-- <div class="container">
+                <a class="navbar-brand" href="{{ url('/') }}">
+                    {{ config('app.name', 'Laravel') }}
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-                                        @error('email')
-                                            <span class="invalid-feedback d-block">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
-                                    </div>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <!-- Left Side Of Navbar -->
+                    <ul class="navbar-nav me-auto">
 
-                                    <!-- Password -->
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Password</label>
-                                        <input type="password" name="password"
-                                            class="form-control @error('password') is-invalid @enderror" required>
+                    </ul>
 
-                                        @error('password')
-                                            <span class="invalid-feedback d-block">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
-                                    </div>
+                    <!-- Right Side Of Navbar -->
+                    <ul class="navbar-nav ms-auto">
+                        <!-- Authentication Links -->
+                        @guest
+                            @if (Route::has('login'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('login') }}">{{ __('Login') }}</a>
+                                </li>
+                            @endif
 
-                                    <!-- Remember -->
-                                    <div class="form-check mb-3">
-                                        <input type="checkbox" class="form-check-input" name="remember">
-                                        <label class="form-check-label">Remember Me</label>
-                                    </div>
+                            @if (Route::has('register'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('register') }}">{{ __('Register') }}</a>
+                                </li>
+                            @endif
+                        @else
+                            <li class="nav-item dropdown">
+                                <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                                    {{ Auth::user()->name }}
+                                </a>
 
-                                    <!-- Button -->
-                                    <div class="d-grid">
-                                        <button type="submit" class="btn btn-primary btn-lg">
-                                            Login
-                                        </button>
-                                    </div>
+                                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                    <a class="dropdown-item" href="{{ route('logout') }}"
+                                       onclick="event.preventDefault();
+                                                     document.getElementById('logout-form').submit();">
+                                        {{ __('Logout') }}
+                                    </a>
 
-                                </form>
-
-                                <div class="text-center mt-4 text-muted small">
-                                    Powered By Egg Shop Management
+                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                                        @csrf
+                                    </form>
                                 </div>
-
-                            </div>
-                        </div>
-
-                    </div>
+                            </li>
+                        @endguest
+                    </ul>
                 </div>
+            </div> --}}
+        </nav>
 
-            </div>
-        </div>
-
+        <main class="py-4">
+            @yield('content')
+        </main>
     </div>
-@endsection
+
+</body>
+
+
+</html>
