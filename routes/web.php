@@ -16,6 +16,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Artisan;
 
 /*
 |--------------------------------------------------------------------------
@@ -133,6 +134,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
 });
 
+
+Route::get('/migrate', function () {
+    Artisan::call('migrate', ['--force' => true]);
+    return 'Migration completed';
+});
 
 // Auth routes
 Auth::routes();
