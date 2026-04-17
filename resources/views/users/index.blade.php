@@ -8,11 +8,11 @@
             <div class="container d-flex align-items-end justify-content-end">
 
 
-                @if (auth()->user()->role == 'admin')
-                    <a href="{{ route('users.create') }}" class="btn btn-primary mb-3">
-                        Add User
-                    </a>
-                @endif
+                {{-- @if (auth()->user()->role == 'admin') --}}
+                <a href="{{ route('users.create') }}" class="btn btn-primary mb-3">
+                    Add User
+                </a>
+                {{-- @endif --}}
             </div>
 
             @if (session('success'))

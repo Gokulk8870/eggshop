@@ -136,7 +136,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
 
 Route::resource('users', UserController::class);
-
+Route::get('/run-migrate', function () {
+    \Artisan::call('migrate', ['--force' => true]);
+    return "Migration Done";
+});
 
 
 // Auth routes
