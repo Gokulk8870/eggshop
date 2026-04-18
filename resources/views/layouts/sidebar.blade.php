@@ -182,12 +182,12 @@
                                 <span class="circle"></span> Create Tray
                             </a>
                         </li>
-                        <li class="{{ request()->routeIs('trays/index') ? 'active' : '' }}">
+                        <li class="{{ request()->routeIs('trays.index') ? 'active' : '' }}">
                             <a href="{{ route('trays.index') }}">
                                 <span class="circle"></span> Manage Tray
                             </a>
                         </li>
-                        <li class="{{ request()->routeIs('trays/return') ? 'active' : '' }}">
+                        <li class="{{ request()->routeIs('tray.return.*') ? 'active' : '' }}">
                             <a href="{{ route('tray.return.store') }}">
                                 <span class="circle"></span> Tray Return
                             </a>
