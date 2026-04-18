@@ -32,24 +32,9 @@ class ReportController extends Controller
     ->select(
         't.id',
         't.tcolor',
-        't.quantity as opening_tray',
-        DB::raw('(SELECT IFNULL(SUM(quantity),0) 
-                  FROM tray_transactions 
-                  WHERE tray_id = t.id AND type = "return") as tray_in'),
-        DB::raw('(SELECT IFNULL(SUM(quantity),0) 
-                  FROM tray_transactions 
-                  WHERE tray_id = t.id AND type = "out") as tray_out'),
-        DB::raw('(
-            t.quantity
-            +
-            (SELECT IFNULL(SUM(quantity),0) 
-             FROM tray_transactions 
-             WHERE tray_id = t.id AND type = "return")
-            -
-            (SELECT IFNULL(SUM(quantity),0) 
-             FROM tray_transactions 
-             WHERE tray_id = t.id AND type IN ("out","damage","lost"))
-        ) as closing_tray')
+        DB::raw('(SELECT IFNULL(SUM(quantity),0) FROM tray_transactions WHERE tray_id = t.id AND type IN ("in","return")) as tray_in'),
+        DB::raw('(SELECT IFNULL(SUM(quantity),0) FROM tray_transactions WHERE tray_id = t.id AND type = "out") as tray_out'),
+        DB::raw('t.quantity as closing_tray')
     )
     ->get();
     return view('reports.stockreport',compact('products','trays'));
@@ -78,30 +63,15 @@ class ReportController extends Controller
             ->select(
                 't.id',
                 't.tcolor',
-                't.quantity as opening_tray',
-        DB::raw('(SELECT IFNULL(SUM(quantity),0) 
-                  FROM tray_transactions 
-                  WHERE tray_id = t.id AND type = "return") as tray_in'),
-        DB::raw('(SELECT IFNULL(SUM(quantity),0) 
-                  FROM tray_transactions 
-                  WHERE tray_id = t.id AND type = "out") as tray_out'),
-        DB::raw('(
-            t.quantity
-            +
-            (SELECT IFNULL(SUM(quantity),0) 
-             FROM tray_transactions 
-             WHERE tray_id = t.id AND type = "return")
-            -
-            (SELECT IFNULL(SUM(quantity),0) 
-             FROM tray_transactions 
-             WHERE tray_id = t.id AND type IN ("out","damage","lost"))
-        ) as closing_tray')
-    );
+                DB::raw('(SELECT IFNULL(SUM(quantity),0) FROM tray_transactions WHERE tray_id = t.id AND type IN ("in","return")) as tray_in'),
+                DB::raw('(SELECT IFNULL(SUM(quantity),0) FROM tray_transactions WHERE tray_id = t.id AND type = "out") as tray_out'),
+                DB::raw('t.quantity as closing_tray')
+            );
     if($request->tcolor){
         $query->where('t.tcolor','like','%'.$request->tcolor.'%');
     }
     $trays=$query->get();
-   
+
     return view('reports.trayreport',compact('trays'));
     }
     public function salesreport(Request $request){

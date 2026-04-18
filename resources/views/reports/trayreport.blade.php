@@ -45,14 +45,8 @@
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-primary text-white p-3">
-                        <h6>Total Opening Tray</h6>
-                        <h4>{{ $trays->sum('opening_tray') }}</h4>
-                    </div>
-                </div>
-                <div class="col-md-3">
                     <div class="card bg-info text-white p-3">
-                        <h6>Total Closing Tray</h6>
+                        <h6>Total Closing Stock</h6>
                         <h4>{{ $trays->sum('closing_tray') }}</h4>
                     </div>
                 </div>
@@ -64,8 +58,7 @@
                         <th>Tray Color</th>
                         <th>Tray In</th>
                         <th>Tray Out</th>
-                        <th>Opening Tray</th>
-                        <th>Close Tray</th>
+                        <th>Current Stock</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,7 +68,6 @@
                             <td>{{ $tray->tcolor }}</td>
                             <td>{{ $tray->tray_in ?? 0 }}</td>
                             <td>{{ $tray->tray_out ?? 0 }}</td>
-                            <td>{{ $tray->opening_tray ?? 0 }}</td>
                             <td>{{ $tray->closing_tray ?? 0 }}</td>
                         </tr>
                     @endforeach

@@ -10,7 +10,7 @@ use App\Models\purchase_invoices_items;
 use App\Models\PurchaseInvoice;
 
 use Illuminate\Http\Request;
-use Nette\Utils\Json;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseInvoiceController extends Controller
 {
@@ -91,7 +91,6 @@ class PurchaseInvoiceController extends Controller
      */
             public function store(Request $request)
         {
-            // ✅ VALIDATION
             $request->validate([
                 'inv_number'     => 'required',
                 'supplier_name'  => 'required',
@@ -101,72 +100,62 @@ class PurchaseInvoiceController extends Controller
                 'purchase_price' => 'required|numeric',
             ]);
 
-            // ✅ BASIC CALCULATION
-            $trayQty   = $request->quantity;
-            $extraEggs = $request->eggs ?? 0;
-            $eggs      = ($trayQty * 30) + $extraEggs;
+            return DB::transaction(function () use ($request) {
 
-            // ✅ CREATE INVOICE
-            $invoice = PurchaseInvoice::create([
-                'inv_number'     => $request->inv_number,
-                'supplier_name'  => $request->supplier_name,
-                'phno'           => $request->phno,
-                'invoice_date'   => $request->invoice_date,
-                'purchase_price' => $request->purchase_price,
-                'total_price'    => $request->total_price,
-                'payment_method' => $request->payment_method,
-                'tray_need'      => $request->tray_need ?? 'no',
-                'tray_id'        => $request->tray_need == 'yes' ? $request->tray_id : null,
-            ]);
+                $trayQty   = $request->quantity;
+                $extraEggs = $request->eggs ?? 0;
+                $eggs      = ($trayQty * 30) + $extraEggs;
 
-            // ✅ PRODUCT FIND
-            $product = Products::find($request->product_id);
+                $invoice = PurchaseInvoice::create([
+                    'inv_number'     => $request->inv_number,
+                    'supplier_name'  => $request->supplier_name,
+                    'phno'           => $request->phno,
+                    'invoice_date'   => $request->invoice_date,
+                    'purchase_price' => $request->purchase_price,
+                    'total_price'    => $request->total_price,
+                    'payment_method' => $request->payment_method,
+                    'tray_need'      => $request->tray_need ?? 'no',
+                    'tray_id'        => $request->tray_need == 'yes' ? $request->tray_id : null,
+                ]);
 
-            if (!$product) {
-                return back()->with('error', 'Product not found');
-            }
+                $product = Products::findOrFail($request->product_id);
 
-            // ✅ SAVE ITEM
-            purchase_invoices_items::create([
-                'invoice_id'     => $invoice->id,
-                'product_id'     => $request->product_id,
-                'quantity'       => $trayQty,
-                'tray_use'       => $request->tray_quantity ?? 0,
-                'eggs'           => $eggs,
-                'purchase_price' => $request->purchase_price,
-                'total'          => $request->total_price,
-                'per_egg_price'=>$request->eggprice,
-            ]);
+                purchase_invoices_items::create([
+                    'invoice_id'     => $invoice->id,
+                    'product_id'     => $request->product_id,
+                    'quantity'       => $trayQty,
+                    'tray_use'       => $request->tray_quantity ?? 0,
+                    'eggs'           => $eggs,
+                    'purchase_price' => $request->purchase_price,
+                    'total'          => $request->total_price,
+                    'per_egg_price'  => $request->eggprice,
+                ]);
 
-            // ✅ INCREASE PRODUCT STOCK
-            $product->increment('totaleggs', $eggs);
-            $product->increment('quantity', $trayQty);
+                $product->increment('totaleggs', $eggs);
+                $product->increment('quantity', $trayQty);
 
-            // ✅ TRAY LOGIC (RETURN = IN)
-            if ($request->tray_need == 'yes' && $request->tray_id) {
+                // ✅ TRAY LOGIC: supplier brings trays = stock IN
+                if ($request->tray_need == 'yes' && $request->tray_id) {
 
-                $trayQtyUsed = $request->tray_quantity ?? 0;
+                    $trayQtyUsed = (int) ($request->tray_quantity ?? 0);
 
-                $tray = Tray::find($request->tray_id);
+                    if ($trayQtyUsed > 0) {
+                        $tray = Tray::lockForUpdate()->findOrFail($request->tray_id);
+                        $tray->increment('quantity', $trayQtyUsed);
 
-                if ($tray && $trayQtyUsed > 0) {
-
-                    // ✅ increase tray stock
-                    $tray->increment('quantity', $trayQtyUsed);
-
-                    // ✅ record transaction
-                    TrayTransaction::create([
-                        'tray_id'      => $tray->id,
-                        'supplier_id'  => supplier::where('phno', $request->phno)->value('id'),
-                        'type'         => 'return',
-                        'quantity'     => $trayQtyUsed,
-                        'reference_id' => $invoice->id,
-                    ]);
+                        TrayTransaction::create([
+                            'tray_id'      => $tray->id,
+                            'supplier_id'  => supplier::where('phno', $request->phno)->value('id'),
+                            'type'         => TrayTransaction::TYPE_IN,
+                            'quantity'     => $trayQtyUsed,
+                            'reference_id' => $invoice->id,
+                        ]);
+                    }
                 }
-            }
 
-            return redirect()->route('purchaseinvoices.index')
-                ->with('success', 'Purchase Invoice Created Successfully');
+                return redirect()->route('purchaseinvoices.index')
+                    ->with('success', 'Purchase Invoice Created Successfully');
+            });
         }
 
     /**
@@ -282,18 +271,16 @@ class PurchaseInvoiceController extends Controller
         // ✅ TRAY UPDATE
         if ($request->tray_need == 'yes' && $request->tray_id) {
 
-            $trayQtyUsed = $request->tray_quantity ?? 0;
+            $trayQtyUsed = (int) ($request->tray_quantity ?? 0);
 
-            $tray = Tray::find($request->tray_id);
-
-            if ($tray && $trayQtyUsed > 0) {
-
+            if ($trayQtyUsed > 0) {
+                $tray = Tray::lockForUpdate()->findOrFail($request->tray_id);
                 $tray->increment('quantity', $trayQtyUsed);
 
                 TrayTransaction::create([
                     'tray_id'      => $tray->id,
                     'supplier_id'  => supplier::where('phno', $request->phno)->value('id'),
-                    'type'         => 'return',
+                    'type'         => TrayTransaction::TYPE_IN,
                     'quantity'     => $trayQtyUsed,
                     'reference_id' => $purchaseInvoice->id,
                 ]);

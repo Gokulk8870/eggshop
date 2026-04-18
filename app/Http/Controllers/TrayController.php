@@ -50,7 +50,7 @@ class TrayController extends Controller
             ['quantity' => 0]
         );
 
-        if ($validated['type'] === 'return') {
+        if ($validated['type'] === TrayTransaction::TYPE_RETURN) {
             $tray->increment('quantity', $validated['quantity']);
         } else {
             if ($tray->quantity < $validated['quantity']) {
@@ -99,7 +99,7 @@ class TrayController extends Controller
         if ($diff !== 0) {
             TrayTransaction::create([
                 'tray_id'  => $tray->id,
-                'type'     => $diff > 0 ? 'return' : 'damage',
+                'type'     => $diff > 0 ? TrayTransaction::TYPE_IN : TrayTransaction::TYPE_DAMAGE,
                 'quantity' => abs($diff),
             ]);
         }
@@ -130,15 +130,17 @@ class TrayController extends Controller
         return view('trays.return', compact('customers', 'trays', 'customer_list'));
     }
 
-            public function storeReturn(Request $request)
+        public function storeReturn(Request $request)
         {
             $request->validate([
                 'customer_id' => 'required|exists:customers,id',
                 'tray_id'     => 'required|exists:trays,id',
                 'quantity'    => 'required|integer|min:1',
             ]);
-            $tray = Tray::find($request->tray_id);
-            $refund=$request->quantity*20;
+
+            $tray   = Tray::findOrFail($request->tray_id);
+            $refund = $request->quantity * 20;
+
             $out = TrayTransaction::where('customer_id', $request->customer_id)
                 ->where('tray_id', $request->tray_id)
                 ->where('type', 'out')
@@ -149,38 +151,29 @@ class TrayController extends Controller
                 ->where('type', 'return')
                 ->sum('quantity');
 
-            $customer_list = TrayTransaction::with('customer')
-                ->where('customer_id', $request->customer_id)
-                ->where('tray_id', $request->tray_id)
-                ->where('quantity', '>', 0)
-                ->where('type', 'out')->get();
-
-
             $balance = $out - $returned;
 
             if ($request->quantity > $balance) {
-                $trayColor = $tray->tcolor ?? 'Tray';
-                return back()->withErrors(['quantity' => "Return exceeds balance. Customer owes {$balance} {$trayColor} trays."]);
+                return back()->withErrors(['quantity' => "Return exceeds balance. Customer owes {$balance} {$tray->tcolor} trays."]);
             }
 
-            $customer = Customer::find($request->customer_id);
+            $customer = Customer::findOrFail($request->customer_id);
 
             DB::transaction(function () use ($request) {
-                $tray = Tray::findOrFail($request->tray_id);
+                $tray = Tray::lockForUpdate()->findOrFail($request->tray_id);
 
                 TrayTransaction::create([
-                    'tray_id' => $tray->id,
+                    'tray_id'     => $tray->id,
                     'customer_id' => $request->customer_id,
-                    'type' => 'return',
-                    'quantity' => $request->quantity,
+                    'type'        => TrayTransaction::TYPE_RETURN,
+                    'quantity'    => $request->quantity,
                 ]);
 
-                $tray->quantity += $request->quantity;
-                $tray->save();
+                $tray->increment('quantity', $request->quantity);
             });
 
             return redirect()->route('trays.return')
-                ->with('success', "₹ $refund refunded to $customer, Tray returned successfully");
+                ->with('success', "₹ $refund refunded to $customer->name, Tray returned successfully");
         }
 
 }

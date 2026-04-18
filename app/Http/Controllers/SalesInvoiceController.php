@@ -77,17 +77,8 @@ class SalesInvoiceController extends Controller
 
     public function create()
     {
-        // $trays = Tray::where('quantity', '>', 0)->get();
-        // $availabletrays=TrayTransaction('type','return')->get();
-        $trays = Tray::with('transactions')->get();
-
-        foreach ($trays as $tray) {
-
-            $returned = $tray->transactions->where('type', 'return')->sum('quantity');
-            $out      = $tray->transactions->where('type', 'out')->sum('quantity');
-
-            $tray->available = $tray->quantity + $returned - $out;
-        }
+        $trays = Tray::where('quantity', '>', 0)->get()
+            ->each(fn($t) => $t->available = $t->quantity);
         $products = Products::all();
         $format = Salesclt::where('status','active')->first();
         $total_price = 0;
@@ -162,11 +153,8 @@ public function store(Request $request)
         // ✅ STEP 4: TRAY CHECK (BEFORE SAVE)
         // ===============================
         if ($trayNeed && $trayId) {
-
             $selectedTray = Tray::findOrFail($trayId);
-
-            $trays = Tray::where('tcolor', $selectedTray->tcolor)->get();
-            $totalAvailable = $trays->sum('quantity');
+            $totalAvailable = Tray::where('tcolor', $selectedTray->tcolor)->sum('quantity');
 
             if ($totalAvailable < $trayQty) {
                 return back()->with('error', "Only {$totalAvailable} trays available");
@@ -234,31 +222,36 @@ public function store(Request $request)
         $product->decrement('quantity', $trayQty);
 
         // ===============================
-        // ✅ STEP 10: TRAY DEDUCTION
+        // ✅ STEP 10: TRAY DEDUCTION (single update per tray, lockForUpdate)
         // ===============================
         if ($trayNeed && $trayId) {
 
             $selectedTray = Tray::findOrFail($trayId);
-            $trays = Tray::where('tcolor', $selectedTray->tcolor)->get();
+            $trays = Tray::where('tcolor', $selectedTray->tcolor)
+                         ->where('quantity', '>', 0)
+                         ->lockForUpdate()
+                         ->get();
 
             $remaining = $trayQty;
 
             foreach ($trays as $tray) {
-
                 if ($remaining <= 0) break;
 
                 $used = min($tray->quantity, $remaining);
-
                 $tray->decrement('quantity', $used);
                 $remaining -= $used;
 
                 TrayTransaction::create([
                     'tray_id'      => $tray->id,
                     'customer_id'  => $customer->id,
-                    'type'         => 'out',
+                    'type'         => TrayTransaction::TYPE_OUT,
                     'quantity'     => $used,
                     'reference_id' => $invoice->id,
                 ]);
+            }
+
+            if ($remaining > 0) {
+                throw new \Exception("Insufficient tray stock. Short by {$remaining} trays.");
             }
         }
 
@@ -476,7 +469,7 @@ public function update(Request $request, $id)
                 TrayTransaction::create([
                     'tray_id'      => $tray->id,
                     'customer_id'  => $customer->id,
-                    'type'         => 'out',
+                    'type'         => TrayTransaction::TYPE_OUT,
                     'quantity'     => $used,
                     'reference_id' => $invoice->id,
                 ]);

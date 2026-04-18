@@ -1,0 +1,421 @@
+================================================================================
+         EGG SHOP ERP — TRAY INVENTORY BUG FIX REPORT
+         Project  : Eggshop (Laravel)
+         Date     : April 2025
+         Scope    : Tray stock duplication, wrong reports, missing dropdown value
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 1 — TRAY STOCK DOUBLE COUNTING (Expected 200, Showing 398)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PREVIOUS CODE (ReportController — trayreport & stockreport)
+------------------------------------------------------------
+The closing_tray was calculated as:
+
+    closing_tray = t.quantity
+                   + SUM(tray_transactions WHERE type = 'return')
+                   - SUM(tray_transactions WHERE type IN ('out','damage','lost'))
+
+PROBLEM
+-------
+- trays.quantity is already the live current stock.
+  Every purchase, sale, and return already updates trays.quantity directly.
+- The report was then ADDING transaction history ON TOP of the already-updated
+  quantity — counting every movement twice.
+- Example: 100 trays purchased → trays.quantity = 100, transaction logged = 100
+  Report showed: 100 + 100 = 200 (double counted)
+- With multiple transactions the number kept growing incorrectly (e.g. 398
+  instead of 200).
+
+WHAT WAS DONE
+-------------
+- Established trays.quantity as the SINGLE SOURCE OF TRUTH for current stock.
+- closing_tray in the report now simply reads t.quantity directly.
+- tray_in and tray_out columns are kept for HISTORY DISPLAY ONLY from
+  tray_transactions — they are never used to recalculate stock.
+
+FIXED CODE (ReportController)
+------------------------------
+    tray_in     = SUM(type IN ('in', 'return'))   -- history only
+    tray_out    = SUM(type = 'out')               -- history only
+    closing_tray = t.quantity                     -- single source of truth
+
+FUNCTIONS USED
+--------------
+    DB::table()         — raw query builder for report
+    DB::raw()           — inline SQL subqueries for tray_in / tray_out
+    IFNULL(SUM(), 0)    — prevent NULL when no transactions exist
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 2 — PURCHASE INVOICE SAVING WRONG TRANSACTION TYPE ('return' instead of 'in')
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PREVIOUS CODE (PurchaseInvoiceController — store & update)
+-----------------------------------------------------------
+    TrayTransaction::create([
+        'type' => 'return',   // WRONG — supplier delivery was saved as 'return'
+        ...
+    ]);
+
+PROBLEM
+-------
+- When a supplier delivered trays with a purchase invoice, the transaction was
+  saved with type = 'return' instead of type = 'in'.
+- 'return' means a CUSTOMER returning trays — completely different meaning.
+- This caused the tray_in report column to miss these entries because the report
+  only counted type = 'return' for tray_in, not supplier deliveries.
+- Stock numbers appeared correct in trays.quantity but the report history was
+  wrong and misleading.
+
+ADDITIONAL PROBLEM — ENUM DID NOT HAVE 'in'
+--------------------------------------------
+- The original migration defined the ENUM as:
+      ENUM('out', 'return', 'damage', 'lost')
+- The value 'in' was never in the ENUM.
+- Saving type = 'in' would have thrown a silent DB error caught by the
+  transaction and rolled back — meaning tray transactions were never saved
+  at all for purchases.
+
+WHAT WAS DONE
+-------------
+1. Created a new migration:
+       2026_04_18_064325_add_in_type_to_tray_transactions_table.php
+
+   Step 1 — Expanded the ENUM:
+       ALTER TABLE tray_transactions
+       MODIFY COLUMN type ENUM('in','out','return','damage','lost') NOT NULL;
+
+   Step 2 — Fixed all existing bad data in one safe UPDATE:
+       UPDATE tray_transactions
+       SET type = 'in'
+       WHERE supplier_id IS NOT NULL AND type = 'return';
+
+   Why this is safe:
+   - Customer returns always have supplier_id = NULL
+   - Supplier deliveries always have supplier_id set
+   - So the WHERE clause only touches supplier rows, never customer returns
+
+2. Changed PurchaseInvoiceController store() and update() to save type = 'in'
+   for all supplier tray deliveries.
+
+3. Wrapped the entire store() in DB::transaction() for atomicity — if any step
+   fails, nothing is saved.
+
+4. Added Tray::lockForUpdate() before incrementing stock to prevent race
+   conditions when two invoices are saved at the same time.
+
+VERIFICATION RESULT (run via php artisan tinker)
+-------------------------------------------------
+    Still bad (supplier + return) : 0   ✅ all fixed
+    Correctly fixed (supplier + in): 1   ✅
+    Customer returns untouched     : 1   ✅ not affected
+
+FUNCTIONS USED
+--------------
+    DB::statement()         — run raw ALTER TABLE and UPDATE SQL
+    DB::transaction()       — wrap all store logic atomically
+    Tray::lockForUpdate()   — pessimistic lock to prevent race conditions
+    $tray->increment()      — atomic DB increment (safer than $tray->qty += x)
+    supplier::where()->value('id')  — get supplier id by phone number
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 3 — SALES INVOICE CREATE: TRAY AVAILABLE STOCK INFLATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PREVIOUS CODE (SalesInvoiceController — create)
+------------------------------------------------
+    $trays = Tray::with('transactions')->get();
+
+    foreach ($trays as $tray) {
+        $returned = $tray->transactions->where('type', 'return')->sum('quantity');
+        $out      = $tray->transactions->where('type', 'out')->sum('quantity');
+        $tray->available = $tray->quantity + $returned - $out;
+    }
+
+PROBLEM
+-------
+- trays.quantity already reflects all past increments and decrements.
+- The code was then ADDING returned transactions and SUBTRACTING out transactions
+  on top of the already-correct quantity — double counting again.
+- Example: 100 trays in stock (trays.quantity = 100), 50 sent out (already
+  deducted from quantity = 50), 20 returned (already added back = 70).
+  Old code: available = 70 + 20 - 50 = 40 (WRONG, should be 70)
+- This showed inflated or deflated available numbers in the tray dropdown on
+  the sales invoice form.
+
+WHAT WAS DONE
+-------------
+- Removed the entire foreach loop and transaction-based calculation.
+- available is now simply set equal to trays.quantity using ->each().
+
+FIXED CODE (SalesInvoiceController — create)
+---------------------------------------------
+    $trays = Tray::where('quantity', '>', 0)->get()
+        ->each(fn($t) => $t->available = $t->quantity);
+
+- Only trays with stock > 0 are shown in the dropdown (no point showing empty).
+- ->each() sets the available property on each model instance in memory.
+- The view {{ $tray->available }} now shows the correct current stock.
+
+FUNCTIONS USED
+--------------
+    Tray::where('quantity', '>', 0)   — filter out empty trays
+    ->get()                           — fetch as Eloquent collection
+    ->each(fn($t) => ...)             — set dynamic property on each model
+                                        without touching the database
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 4 — SALES INVOICE DROPDOWN SHOWING BLANK AVAILABLE COUNT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PREVIOUS CODE (SalesInvoiceController — create, after Issue 3 fix attempt)
+---------------------------------------------------------------------------
+    $trays = Tray::where('quantity', '>', 0)->get();
+    // No ->available property set
+
+BLADE VIEW (salesinvoices/create.blade.php)
+-------------------------------------------
+    <option value="{{ $tray->id }}">
+        {{ $tray->tcolor }} ({{ $tray->available }})
+    </option>
+
+PROBLEM
+-------
+- After fixing Issue 3, the controller sent plain Eloquent models with no
+  'available' attribute set on them.
+- The view was still referencing $tray->available which did not exist.
+- Laravel returns null for undefined properties — so the dropdown showed:
+      "Red ()"   instead of   "Red (150)"
+
+WHAT WAS DONE
+-------------
+- Added ->each(fn($t) => $t->available = $t->quantity) to the query chain.
+- This sets the available property dynamically on each model in memory.
+- The view required zero changes — it already used $tray->available correctly.
+
+FIXED CODE
+----------
+    $trays = Tray::where('quantity', '>', 0)->get()
+        ->each(fn($t) => $t->available = $t->quantity);
+
+RESULT
+------
+    Dropdown now shows:   "Red (150)"   "White (80)"   etc.
+
+FUNCTIONS USED
+--------------
+    ->each(fn($t) => $t->available = $t->quantity)
+        — Eloquent Collection method, iterates and sets a dynamic property
+          on each model instance without a DB query or model change
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 5 — TRAY RETURN: RACE CONDITION AND UNSAFE SAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PREVIOUS CODE (TrayController — storeReturn)
+--------------------------------------------
+    DB::transaction(function () use ($request) {
+        $tray = Tray::findOrFail($request->tray_id);   // no lock
+        TrayTransaction::create([...]);
+        $tray->quantity += $request->quantity;          // unsafe manual add
+        $tray->save();
+    });
+
+    // Also had unused query:
+    $customer_list = TrayTransaction::with('customer')...->get();
+
+    // Success message bug:
+    ->with('success', "₹ $refund refunded to $customer, ...")
+    // $customer is an Eloquent object — would print "App\Models\Customer Object"
+
+PROBLEM
+-------
+1. No lockForUpdate() — two simultaneous returns could both read the same
+   quantity, both add to it, and one update would overwrite the other.
+2. $tray->quantity += x; $tray->save() is not atomic — another process could
+   change quantity between the read and the save.
+3. $customer_list query was built but never used — wasted DB query.
+4. Success message interpolated the full Customer object instead of ->name.
+
+WHAT WAS DONE
+-------------
+1. Added Tray::lockForUpdate()->findOrFail() inside the transaction — this
+   places a row-level lock so no other process can read or write that row
+   until the transaction completes.
+2. Replaced manual $tray->quantity += x; $tray->save() with $tray->increment()
+   which is a single atomic SQL UPDATE quantity = quantity + x.
+3. Removed the unused $customer_list query entirely.
+4. Fixed success message to use $customer->name.
+
+FIXED CODE
+----------
+    DB::transaction(function () use ($request) {
+        $tray = Tray::lockForUpdate()->findOrFail($request->tray_id);
+        TrayTransaction::create([...]);
+        $tray->increment('quantity', $request->quantity);
+    });
+
+FUNCTIONS USED
+--------------
+    DB::transaction()               — atomic wrapper, auto rollback on exception
+    Tray::lockForUpdate()           — pessimistic row lock (SELECT ... FOR UPDATE)
+    $tray->increment('quantity', n) — atomic SQL: UPDATE trays SET quantity = quantity + n
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 6 — TRAY TRANSACTION TYPE CONSTANTS NOT USED (RAW STRINGS EVERYWHERE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PREVIOUS CODE (all controllers)
+--------------------------------
+    'type' => 'in'
+    'type' => 'out'
+    'type' => 'return'
+    'type' => 'damage'
+
+PROBLEM
+-------
+- Raw strings scattered across 3 controllers.
+- A typo like 'retrun' or 'Out' would silently save wrong data or throw a DB
+  error with no clear indication of where the mistake was.
+- No central place to see all valid types.
+- TrayController::update() was saving type = 'return' for a positive manual
+  quantity adjustment — semantically wrong (should be 'in', not 'return').
+
+WHAT WAS DONE
+-------------
+- Added constants to TrayTransaction model:
+
+    const TYPE_IN     = 'in';
+    const TYPE_OUT    = 'out';
+    const TYPE_RETURN = 'return';
+    const TYPE_DAMAGE = 'damage';
+    const TYPE_LOST   = 'lost';
+    const TYPES       = [self::TYPE_IN, self::TYPE_OUT, ...];
+
+- Added a booted() hook on the model that throws InvalidArgumentException
+  if an invalid type or zero/negative quantity is ever passed — second line
+  of defence after the DB ENUM.
+
+- Replaced ALL raw strings in PurchaseInvoiceController, SalesInvoiceController,
+  and TrayController with the constants.
+
+- Fixed TrayController::update() manual adjustment:
+    Before: $diff > 0 ? 'return' : 'damage'
+    After:  $diff > 0 ? TrayTransaction::TYPE_IN : TrayTransaction::TYPE_DAMAGE
+
+FUNCTIONS USED
+--------------
+    const TYPE_IN = 'in'            — PHP class constant
+    static::saving(function(){})    — Eloquent model booted() hook
+    in_array($type, self::TYPES)    — validate type before saving
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ISSUE 7 — SALES INVOICE STORE: NO LOCK ON TRAY DEDUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PREVIOUS CODE (SalesInvoiceController — store, tray deduction loop)
+--------------------------------------------------------------------
+    $trays = Tray::where('tcolor', $selectedTray->tcolor)->get(); // no lock
+    foreach ($trays as $tray) {
+        $tray->decrement('quantity', $used);
+        TrayTransaction::create([...]);
+    }
+    // No check if stock ran out mid-loop
+
+PROBLEM
+-------
+- No lockForUpdate() — two simultaneous sales could both read the same tray
+  quantity and both deduct from it, resulting in negative stock.
+- No filter for trays with quantity > 0 — loop would process zero-stock trays
+  and create zero-quantity transactions (invalid).
+- No exception thrown if stock ran out mid-loop — the transaction would commit
+  with partial deduction and wrong data.
+
+WHAT WAS DONE
+-------------
+- Added ->where('quantity', '>', 0) to skip empty trays.
+- Added ->lockForUpdate() to lock all matching tray rows for the duration of
+  the transaction.
+- Added a $remaining check after the loop — if stock ran out, throws an
+  Exception which triggers DB::rollback() automatically via the catch block.
+
+FIXED CODE
+----------
+    $trays = Tray::where('tcolor', $selectedTray->tcolor)
+                 ->where('quantity', '>', 0)
+                 ->lockForUpdate()
+                 ->get();
+
+    $remaining = $trayQty;
+    foreach ($trays as $tray) {
+        if ($remaining <= 0) break;
+        $used = min($tray->quantity, $remaining);
+        $tray->decrement('quantity', $used);
+        $remaining -= $used;
+        TrayTransaction::create([...]);
+    }
+
+    if ($remaining > 0) {
+        throw new \Exception("Insufficient tray stock. Short by {$remaining} trays.");
+    }
+
+FUNCTIONS USED
+--------------
+    ->where('quantity', '>', 0)     — skip zero-stock trays
+    ->lockForUpdate()               — row-level lock for all matched trays
+    min($tray->quantity, $remaining)— safely calculate how much to deduct
+    throw new \Exception()          — triggers catch block and DB::rollback()
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUMMARY TABLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ #  | File                              | Problem                          | Fix
+----|-----------------------------------|----------------------------------|-----------------------------
+ 1  | ReportController.php              | closing_tray double counted      | Use t.quantity directly
+ 2  | PurchaseInvoiceController.php     | type='return' for supplier       | type='in' + ENUM migration
+ 3  | SalesInvoiceController.php        | available inflated by history    | available = quantity only
+ 4  | salesinvoices/create.blade.php    | $tray->available was null/blank  | ->each() sets available
+ 5  | TrayController.php (storeReturn)  | race condition + unsafe save     | lockForUpdate + increment()
+ 6  | All 3 controllers                 | raw type strings, wrong type     | Model constants + booted()
+ 7  | SalesInvoiceController.php        | no lock on tray deduction loop   | lockForUpdate + throw
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILES CHANGED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    app/Http/Controllers/ReportController.php
+    app/Http/Controllers/PurchaseInvoiceController.php
+    app/Http/Controllers/SalesInvoiceController.php
+    app/Http/Controllers/TrayController.php
+    app/Models/TrayTransaction.php
+    database/migrations/2026_04_18_064325_add_in_type_to_tray_transactions_table.php
+    resources/views/reports/trayreport.blade.php
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY PRINCIPLE APPLIED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    trays.quantity      = SINGLE SOURCE OF TRUTH for current stock
+    tray_transactions   = HISTORY / AUDIT LOG only (never used to recalculate)
+
+    Every action updates trays.quantity ONCE:
+        Purchase  → trays.quantity + n   (type = 'in')
+        Sale      → trays.quantity - n   (type = 'out')
+        Return    → trays.quantity + n   (type = 'return')
+        Damage    → trays.quantity - n   (type = 'damage')
+
+================================================================================
+                              END OF REPORT
+================================================================================
