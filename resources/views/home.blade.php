@@ -82,7 +82,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="card text-center p-3">
-                            <h5>Add Supplier</h5>
+                            <h5>Create Supplier</h5>
                             <a href="{{ route('suppliers.create') }}" class="btn btn-primary btn-sm mt-2">
                                 Open
                             </a>
@@ -94,6 +94,14 @@
 
             <div class="row mt-3">
                 @if (auth()->user()->role === 'admin')
+                    <div class="col-md-3">
+                        <div class="card text-center p-3">
+                            <h5>Add Products</h5>
+                            <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm mt-2">
+                                Open
+                            </a>
+                        </div>
+                    </div>
                     <div class="col-md-3">
                         <div class="card text-center p-3">
                             <h5>Add Expense</h5>

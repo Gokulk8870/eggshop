@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SalesInvoice;
-use App\Models\Products;
+use App\Models\products;
 use App\Models\Salesclt;
 use App\Models\Tray;
 use App\Models\Customer;
@@ -107,7 +107,7 @@ class SalesInvoiceController extends Controller
 
     public function getProducts(Request $request)
     {
-        $product = Products::find($request->id);
+        $product = products::find($request->id);
 
         return response()->json($product);
     }

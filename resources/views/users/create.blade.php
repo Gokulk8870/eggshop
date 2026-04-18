@@ -2,11 +2,7 @@
 @section('title', 'Create New User')
 @section('content')
     <div class="card">
-
-
-        <div class="container">
-
-
+        <div class="card-body">
             <form action="{{ route('users.store') }}" method="POST">
                 @csrf
 
