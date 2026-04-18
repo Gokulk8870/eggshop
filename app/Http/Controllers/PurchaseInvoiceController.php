@@ -83,7 +83,7 @@ class PurchaseInvoiceController extends Controller
         }
         $number = str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
         $invoice_number = $prefix.'/'.$year.'/'.$suffix.'/'.$number;
-        return view('purchaseinvoices.create',compact('invoice_number','trays','products','total_price'));
+        return view('purchaseInvoices.create',compact('invoice_number','trays','products','total_price'));
     }
 
     /**
