@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Products;
+use App\Models\products;
 use App\Models\Tray;
 use App\Models\TrayTransaction;
 use Doctrine\DBAL\Query;
@@ -13,7 +13,7 @@ class ProductsController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Products::query();
+        $query = products::query();
         if($request->product_name){
             $query->where('product_name','like','%'.$request->product_name.'%');
         }
@@ -24,7 +24,7 @@ class ProductsController extends Controller
             $query->where('color','like','%'.$request->color.'%');
         }
         $products=$query->orderBy('id','desc')->get();
-        $sizes = Products::select('size')->distinct()->pluck('size');
+        $sizes = products::select('size')->distinct()->pluck('size');
         $colors = Products::select('color')->distinct()->pluck('color');;
 
         return view('products.index', compact('products','sizes','colors'));
@@ -96,18 +96,18 @@ class ProductsController extends Controller
                 ]);
             }
 
-            Products::create($validated);
+            products::create($validated);
 
             return redirect()->route('products.index')->with('success', 'Product created successfully');
         });
     }
 
-    public function show(Products $product)
+    public function show(products $product)
     {
         return view('products.show', compact('product'));
     }
 
-    public function edit(Products $product)
+    public function edit(products $product)
     {
         $trays = Tray::all();
         return view('products.edit', compact('product', 'trays'));
@@ -129,7 +129,7 @@ class ProductsController extends Controller
         $validated['eggprice']  = $validated['sale_price'] / 30;
         $validated['totaleggs'] = $validated['quantity'] * 30;
 
-        $product = Products::findOrFail($id);
+        $product = products::findOrFail($id);
 
         return DB::transaction(function () use ($product, $validated) {
             $oldColor = $product->tray_color;
@@ -183,7 +183,7 @@ class ProductsController extends Controller
         });
     }
 
-    public function destroy(Products $product)
+    public function destroy(products $product)
     {
         return DB::transaction(function () use ($product) {
             if ($product->tray_color && $product->quantity > 0) {
