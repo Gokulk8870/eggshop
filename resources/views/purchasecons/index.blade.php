@@ -37,7 +37,7 @@
                 @endif
 
             </div>
-            <table class="table table-borderd " id="purchasecon">
+            <table class="table table-borderd" id="purchasecon">
                 <thead class="table table-info">
                     <tr>
                         <th>S.No</th>
@@ -47,7 +47,7 @@
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody class="table-borderd">
+                <tbody>
                     @foreach ($purchasecons as $purchasecon)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
