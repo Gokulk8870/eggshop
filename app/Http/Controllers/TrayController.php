@@ -118,10 +118,16 @@ class TrayController extends Controller
 
     public function returnForm()
     {
-        $customers = Customer::all();
-        $trays     = Tray::where('quantity', '>', 0)->get();
+        $customers     = Customer::all();
+        $trays         = Tray::where('quantity', '>', 0)->get();
+        $customer_list = TrayTransaction::with('customer', 'tray')
+            ->selectRaw('customer_id, tray_id, SUM(quantity) as total_quantity')
+            ->where('type', 'out')
+            ->whereNotNull('customer_id')
+            ->groupBy('customer_id', 'tray_id')
+            ->get();
 
-        return view('trays.return', compact('customers', 'trays'));
+        return view('trays.return', compact('customers', 'trays', 'customer_list'));
     }
 
             public function storeReturn(Request $request)
@@ -142,6 +148,12 @@ class TrayController extends Controller
                 ->where('tray_id', $request->tray_id)
                 ->where('type', 'return')
                 ->sum('quantity');
+
+            $customer_list = TrayTransaction::with('customer')
+                ->where('customer_id', $request->customer_id)
+                ->where('tray_id', $request->tray_id)
+                ->where('quantity', '>', 0)
+                ->where('type', 'out')->get();
 
 
             $balance = $out - $returned;
@@ -167,7 +179,8 @@ class TrayController extends Controller
                 $tray->save();
             });
 
-            return redirect()->route('trays.return')->with('success', "₹ $refund refunded to $customer, Tray returned successfully");
+            return redirect()->route('trays.return')
+                ->with('success', "₹ $refund refunded to $customer, Tray returned successfully");
         }
 
 }

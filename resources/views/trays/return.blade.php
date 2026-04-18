@@ -62,6 +62,28 @@
                     <a href="{{ route('trays.index') }}" class="btn btn-secondary">Back</a>
                 </div>
             </form>
+            <div class="mt-3">
+                <table class="table table-bordered">
+                    <thead class="table table-info">
+                        <tr>
+                            <th>S.no</th>
+                            <th>Customer</th>
+                            <th>Tray</th>
+                            <th>Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($customer_list as $item)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $item->customer->name ?? 'N/A' }}</td>
+                                <td>{{ $item->tray->tcolor ?? 'N/A' }}</td>
+                                <td>{{ $item->total_quantity }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 @endsection
