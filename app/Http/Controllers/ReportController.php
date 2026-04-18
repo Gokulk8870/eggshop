@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Products;
+use App\Models\products;
 use App\Models\purchase_invoices_items;
 use App\Models\SalesInvoiceItem;
 use App\Models\SalesInvoice;
