@@ -5,7 +5,7 @@ use App\Models\supplier;
 use App\Models\Tray;
 use App\Models\TrayTransaction;
 use App\Models\purchasecon;
-use App\Models\Products;
+use App\Models\products;
 use App\Models\purchase_invoices_items;
 use App\Models\PurchaseInvoice;
 
@@ -67,7 +67,7 @@ class PurchaseInvoiceController extends Controller
     public function create()
     {
         $trays = Tray::all();
-        $products = Products::all();
+        $products = products::all();
         $format = purchasecon::where('status','active')->first();
         $total_price = 0;
         $prefix = $format->prefix;

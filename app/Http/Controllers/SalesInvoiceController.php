@@ -131,27 +131,19 @@ public function store(Request $request)
             'total_price'    => 'required|numeric|min:0',
         ]);
 
-        // ===============================
-        // ✅ STEP 2: INPUTS
-        // ===============================
-        $trayQty = (int) $request->quantity;   // trays
-        $eggs    = (int) $request->eggs;       // already calculated in UI
+        $trayQty = (int) $request->quantity;   
+        $eggs    = (int) $request->eggs;       
 
         $trayNeed = $request->tray_need === 'yes';
         $trayId   = $trayNeed ? $request->tray_id : null;
 
-        // ===============================
-        // ✅ STEP 3: PRODUCT CHECK
-        // ===============================
+        
         $product = Products::findOrFail($request->product_id);
 
         if ($product->totaleggs < $eggs || $product->quantity < $trayQty) {
             return back()->with('error', 'Insufficient product stock');
         }
 
-        // ===============================
-        // ✅ STEP 4: TRAY CHECK (BEFORE SAVE)
-        // ===============================
         if ($trayNeed && $trayId) {
             $selectedTray = Tray::findOrFail($trayId);
             $totalAvailable = Tray::where('tcolor', $selectedTray->tcolor)->sum('quantity');
@@ -161,17 +153,11 @@ public function store(Request $request)
             }
         }
 
-        // ===============================
-        // ✅ STEP 5: CUSTOMER
-        // ===============================
         $customer = Customer::firstOrCreate(
             ['phno' => $request->phno],
             ['name' => $request->customer_name]
         );
 
-        // ===============================
-        // ✅ STEP 6: CREATE INVOICE
-        // ===============================
         $invoice = SalesInvoice::create([
             'inv_number'     => $request->inv_number,
             'customer_name'  => $request->customer_name,
@@ -255,9 +241,6 @@ public function store(Request $request)
             }
         }
 
-        // ===============================
-        // ✅ FINAL COMMIT
-        // ===============================
         DB::commit();
 
         return redirect()
