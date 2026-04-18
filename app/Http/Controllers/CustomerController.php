@@ -55,7 +55,7 @@ $customers=customer::where('name','like','%'.$request->name.'%')->get();
         Customer::create([
             'name'=> $request->cname,
             'phno'=>$request->phno,
-            'addr'=>$request->address,
+            'addr'=>$request->addr,
             'status'=>$request->status,
         ]);
         return redirect()->route('customers.index');
