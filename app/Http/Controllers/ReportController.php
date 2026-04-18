@@ -6,6 +6,7 @@ use App\Models\products;
 use App\Models\purchase_invoices_items;
 use App\Models\SalesInvoiceItem;
 use App\Models\SalesInvoice;
+use App\Models\PurchaseInvoice;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use PhpParser\Builder\Function_;
@@ -168,12 +169,12 @@ class ReportController extends Controller
             ]);
         }
         $sales=$query->get();
-        $customers=SalesInvoice::all();
+        $customers=SalesInvoice::select('customer_name')->distinct()->get();
         $paymentmethods=SalesInvoice::select('payment_method')->distinct()->get();
         return view('reports.salereport',compact('sales','customers','paymentmethods'));
     }
-    public function purchasereport(){
-        $purchases=DB::table('purchase_invoices as p')
+    public function purchasereport(Request $request){
+        $query=DB::table('purchase_invoices as p')
         ->select(
             'p.id',
             'p.supplier_name',
@@ -182,8 +183,61 @@ class ReportController extends Controller
             'p.total_price as total_amount',
             DB::raw('(select IFNULL(SUM(quantity),0) from purchase_invoices_items where invoice_id=p.id )as total_items'),
             DB::raw('(SELECT IFNULL(SUM(eggs), 0) from purchase_invoices_items where invoice_id=p.id )as eggscount'),
-        )->get();
-        return view('reports.purchasereport',compact('purchases'));
+        );
+        if($request->supplier_name){
+            $query->where('p.supplier_name', 'like', '%'.$request->supplier_name.'%');
+        }
+        if($request->payment_method){
+            $query->where('p.payment_method', 'like', '%'.$request->payment_method.'%');
+        }
+        $filter = $request->date_filter;
+        if($filter=='today'){
+            $query->whereDate('p.invoice_date',Carbon::today());
+        }
+        else if($filter=='yesterday'){
+            $query->whereDate('p.invoice_date',Carbon::yesterday());
+        }
+        else if($filter=='this_week'){
+            $query->whereBetween('p.invoice_date',[
+                carbon::now()->startOfWeek(),
+                Carbon::now()->endOfWeek()
+            ]);
+        }
+        else if($filter == 'last_week'){
+            $query->whereBetween('p.invoice_date',[
+                Carbon::now()->subWeek()->startOfWeek(),
+                Carbon::now()->subWeek()->endOfWeek()
+            ]);
+        }
+        else if($filter == 'this_month'){
+            $query->whereBetween('p.invoice_date',[
+                Carbon::now()->startOfMonth(),
+                Carbon::now()->endOfMonth()
+            ]);
+
+        }
+        else if($filter=='last_month'){
+            $query->whereBetween('p.invoice_date',[
+                Carbon::now()->subMonth()->startOfMonth(),
+                Carbon::now()->subMonth()->endOfMonth()
+            ]);
+        }
+        else if($filter=='this_year'){
+            $query->whereBetween('p.invoice_date',[
+                Carbon::now()->startOfYear(),
+                Carbon::now()->endOfYear()
+            ]);
+        }
+        else if($filter=='last_year'){
+            $query->whereBetween('p.invoice_date',[
+                Carbon::now()->subYear()->startOfYear(),
+                Carbon::now()->subYear()->endOfYear()
+            ]);
+        }
+        $purchases=$query->get();
+        $supplierlist=PurchaseInvoice::select('supplier_name')->distinct()->get();
+        $paymentmods=PurchaseInvoice::select('payment_method')->distinct()->get();
+        return view('reports.purchasereport',compact('purchases','supplierlist','paymentmods'));
     }
     public function profitlossreport()
 {
