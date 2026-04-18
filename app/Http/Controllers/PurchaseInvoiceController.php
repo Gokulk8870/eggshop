@@ -34,7 +34,7 @@ class PurchaseInvoiceController extends Controller
                     ->distinct()->get();
         $paymentMethods=PurchaseInvoice::select('payment_method')
                     ->distinct()->pluck('payment_method');
-        return view('purchaseinvoices.index',compact('purchaseInvoices','suppliers','paymentMethods'));
+        return view('purchaseInvoices.index',compact('purchaseInvoices','suppliers','paymentMethods'));
     }
 
     public function supsearch(Request $request){
