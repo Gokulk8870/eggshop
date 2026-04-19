@@ -111,8 +111,9 @@
                                             class="fas fa-edit"></i></a>
                                     <form action="{{ route('purchaseinvoices.destroy', $purchaseinvoice->id) }}"
                                         method="POST" class="d-inline">
-                                        @method('DELETE')
                                         @csrf
+                                        @method('DELETE')
+
                                         <button type="submit" class="btn btn-primary"><i class="fas fa-trash"></i></button>
                                     </form>
                                 @endif
