@@ -120,6 +120,8 @@
                             <td>
                                 <input type="text" id="purchase_price" name="purchase_price" class="form-control"
                                     value="{{ $item->product->purchase_price ?? '' }}">
+
+
                             </td>
                             <td>
                                 <input type="number" id="quantity" name="quantity" class="form-control"
@@ -130,7 +132,8 @@
                                     class="form-control" readonly>
                             </td>
                             <td>
-                                <input type="text" id="price" name="price" class="form-control">
+                                <input type="text" id="price" name="price" class="form-control"
+                                    value="{{ $item->product->purchase_price * $item->quantity }}">
                             </td>
                         </tr>
                     </tbody>

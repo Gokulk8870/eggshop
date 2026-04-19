@@ -91,6 +91,7 @@ class PurchaseInvoiceController extends Controller
      */
             public function store(Request $request)
         {
+            
             $request->validate([
                 'inv_number'     => 'required',
                 'supplier_name'  => 'required',
@@ -103,8 +104,8 @@ class PurchaseInvoiceController extends Controller
             return DB::transaction(function () use ($request) {
 
                 $trayQty   = $request->quantity;
-                $extraEggs = $request->eggs ?? 0;
-                $eggs      = ($trayQty * 30) + $extraEggs;
+               
+                $eggs      = $trayQty * 30;
 
                 $invoice = PurchaseInvoice::create([
                     'inv_number'     => $request->inv_number,
