@@ -154,7 +154,7 @@ class PurchaseInvoiceController extends Controller
                     }
                 }
 
-                return redirect()->route('purchaseinvoices.index')
+                return redirect()->route('purchaseInvoices.index')
                     ->with('success', 'Purchase Invoice Created Successfully');
             });
         }
@@ -167,7 +167,7 @@ class PurchaseInvoiceController extends Controller
     $invoice = PurchaseInvoice::with(['items.product', 'tray'])
         ->findOrFail($id);
 
-    return view('purchaseinvoices.show', compact('invoice'));
+    return view('purchaseInvoices.show', compact('invoice'));
 }
 
     /**
@@ -182,7 +182,7 @@ class PurchaseInvoiceController extends Controller
     $trays = Tray::all();
     $item = $purchaseInvoice->items->first();
 
-    return view('purchaseinvoices.edit', compact(
+    return view('purchaseInvoices.edit', compact(
         'purchaseInvoice',
         'products',
         'trays',
@@ -288,7 +288,7 @@ class PurchaseInvoiceController extends Controller
             }
         }
 
-        return redirect()->route('purchaseinvoices.index')
+        return redirect()->route('purchaseInvoices.index')
             ->with('success', 'Updated successfully');
     }
 
@@ -328,7 +328,7 @@ class PurchaseInvoiceController extends Controller
      public function bill($id){
         $purchaseinvoice = PurchaseInvoice::with('items.product')->findOrFail($id);
         $item = $purchaseinvoice->items->first();
-        return view('purchaseinvoices.bill', compact('purchaseinvoice', 'item'));
+        return view('purchaseInvoices.bill', compact('purchaseinvoice', 'item'));
      }
 
 }
