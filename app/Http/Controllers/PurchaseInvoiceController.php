@@ -154,7 +154,7 @@ class PurchaseInvoiceController extends Controller
                     }
                 }
 
-                return redirect()->route('purchaseInvoices.index')
+                return redirect()->route('purchaseinvoices.index')
                     ->with('success', 'Purchase Invoice Created Successfully');
             });
         }
@@ -288,7 +288,7 @@ class PurchaseInvoiceController extends Controller
             }
         }
 
-        return redirect()->route('purchaseInvoices.index')
+        return redirect()->route('purchaseinvoices.index')
             ->with('success', 'Updated successfully');
     }
 
