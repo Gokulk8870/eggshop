@@ -28,7 +28,7 @@ class purchase_invoices_items extends Model
     // 🔗 Relationship → belongs to Product
     public function product()
     {
-        return $this->belongsTo(Products::class, 'product_id');
+        return $this->belongsTo(products::class, 'product_id');
     }
     
 }
