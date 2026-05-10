@@ -110,7 +110,7 @@
                                     <a href="{{ route('purchaseinvoices.edit', $purchaseinvoice->id) }}"><i
                                             class="fas fa-edit"></i></a>
                                     <form action="{{ route('purchaseinvoices.destroy', $purchaseinvoice->id) }}"
-                                        method="POST" onsubmit="return confirm('Delete this invoice?')">
+                                        method="POST" onsubmit="return confirm('Delete this invoice?')" class="d-inline">
 
                                         @csrf
                                         @method('DELETE')
