@@ -65,8 +65,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('salesinvoices', SalesInvoiceController::class);
 
     // Logout
-    Route::get('/logout', [LoginController::class, 'logout'])
-        ->name('logout');
+    Route::get('logout', [LoginController::class, 'logout']);
+        
 });
 
 
