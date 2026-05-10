@@ -58,22 +58,61 @@ class ReportController extends Controller
         $productnames = products::all();
         return view('reports.productreport',compact('products','productnames'));
     }       
-    public function trayreport(Request $request){
-        $query = DB::table('trays as t')
-            ->select(
-                't.id',
-                't.tcolor',
-                DB::raw('(SELECT IFNULL(SUM(quantity),0) FROM tray_transactions WHERE tray_id = t.id AND type IN ("in","return")) as tray_in'),
-                DB::raw('(SELECT IFNULL(SUM(quantity),0) FROM tray_transactions WHERE tray_id = t.id AND type = "out") as tray_out'),
-                DB::raw('t.quantity as closing_tray')
-            );
-    if($request->tcolor){
-        $query->where('t.tcolor','like','%'.$request->tcolor.'%');
-    }
-    $trays=$query->get();
+   public function trayreport(Request $request)
+{
+    $query = DB::table('trays as t')
+        ->select(
+            't.id',
+            't.tcolor',
 
-    return view('reports.trayreport',compact('trays'));
+            DB::raw('
+                (
+                    SELECT IFNULL(SUM(quantity),0)
+                    FROM tray_transactions
+                    WHERE tray_id = t.id
+                    AND type IN ("in","return")
+                ) AS tray_in
+            '),
+
+            DB::raw('
+                (
+                    SELECT IFNULL(SUM(quantity),0)
+                    FROM tray_transactions
+                    WHERE tray_id = t.id
+                    AND type = "out"
+                ) AS tray_out
+            '),
+
+            DB::raw('
+                (
+                    (
+                        SELECT IFNULL(SUM(quantity),0)
+                        FROM tray_transactions
+                        WHERE tray_id = t.id
+                        AND type IN ("in","return")
+                    )
+
+                    -
+
+                    (
+                        SELECT IFNULL(SUM(quantity),0)
+                        FROM tray_transactions
+                        WHERE tray_id = t.id
+                        AND type = "out"
+                    )
+                ) AS closing_tray
+            ')
+        );
+
+    // Filter by tray color
+    if ($request->tcolor) {
+        $query->where('t.tcolor', 'like', '%' . $request->tcolor . '%');
     }
+
+    $trays = $query->get();
+
+    return view('reports.trayreport', compact('trays'));
+}
     public function salesreport(Request $request){
 
         $query=DB::table('sales_invoices as s')
