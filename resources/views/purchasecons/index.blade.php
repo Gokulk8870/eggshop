@@ -65,7 +65,7 @@
                                     <form action="{{ route('purchasecon.destroy', $purchasecon->id) }}" method="get"
                                         class="d-inline">
                                         @method('DELETE')
-                                        <button type="submit" class="btn"><i class="fas fa-trash"></i></button>
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-trash"></i></button>
                                     </form>
                                 @endif
                             </td>

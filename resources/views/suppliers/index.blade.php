@@ -108,7 +108,7 @@
                                         class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm p-1"
+                                        <button type="submit" class="btn btn-primary btn-sm p-1"
                                             onclick="return confirm('Are you Sure?')">
                                             <i class="fas fa-trash"></i>
                                         </button>

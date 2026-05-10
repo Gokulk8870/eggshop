@@ -49,7 +49,7 @@
                                         style="display:inline;">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-danger btn-sm" onclick="return confirm('Delete?')">
+                                        <button class="btn btn-primary btn-sm" onclick="return confirm('Delete?')">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>

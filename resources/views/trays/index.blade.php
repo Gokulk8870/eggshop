@@ -84,7 +84,7 @@
                                         @csrf
                                         @method('DELETE')
 
-                                        <button type="submit" class="btn btn-sm btn-danger"
+                                        <button type="submit" class="btn btn-sm btn-primary"
                                             onclick="return confirm('Delete this tray?')">
                                             <i class="fas fa-trash"></i>
                                         </button>
